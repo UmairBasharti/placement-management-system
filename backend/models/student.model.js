@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 
-// Status values match exactly what the frontend renders
 const PLACEMENT_STATUSES = ['Unplaced', 'Under Review', 'Interview Scheduled', 'Placed'];
+const RESUME_STATUSES = ['pending', 'approved', 'rejected'];
+const MAX_NOTIFICATIONS = 100;
 
 const studentSchema = new mongoose.Schema({
     user: {
@@ -11,7 +12,7 @@ const studentSchema = new mongoose.Schema({
         unique: true   // one student profile per user account
     },
 
-    // Profile fields — stored as plain text to match frontend's textarea inputs
+    // Free text, edited in textareas on the profile page
     skills:    { type: String, default: '' },
     education: { type: String, default: '' },
     projects:  { type: String, default: '' },
@@ -22,30 +23,30 @@ const studentSchema = new mongoose.Schema({
         default: 'Unplaced'
     },
 
-    // Resume stored as metadata; actual file lives in backend/uploads/
+    // The PDF itself lives in MongoDB GridFS (bucket "resumes"); this holds its metadata
     resume: {
         name:       { type: String, default: null },
-        path:       { type: String, default: null },   // relative path for serving: /uploads/filename.pdf
-        uploadedAt: { type: Date,   default: null },
-        approved:   { type: Boolean, default: false }
+        fileId:     { type: mongoose.Schema.Types.ObjectId, default: null },
+        uploadedAt: { type: Date, default: null },
+        status:     { type: String, enum: RESUME_STATUSES, default: 'pending' }
     },
 
-    // Notifications pushed by admin actions
     notifications: [{
         message:   { type: String, required: true },
         timestamp: { type: Date, default: Date.now },
         read:      { type: Boolean, default: false }
     }],
 
-    // Events the student added to their personal calendar
+    // Events the student added to their personal calendar (copied from the shared Event)
     events: [{
+        eventId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Event' },
         title:       String,
-        date:        String,   // ISO string kept as-is from frontend
+        date:        String,
         description: String,
         addedAt:     { type: Date, default: Date.now }
     }],
 
-    // History of placement status changes
+    // Placement-status changes, oldest first
     statusHistory: [{
         status:    String,
         message:   String,
@@ -53,5 +54,15 @@ const studentSchema = new mongoose.Schema({
     }]
 
 }, { timestamps: true });
+
+// Add a notification and keep only the most recent MAX_NOTIFICATIONS
+studentSchema.methods.notify = function (message) {
+    this.notifications.push({ message });
+    if (this.notifications.length > MAX_NOTIFICATIONS) {
+        this.notifications = this.notifications.slice(-MAX_NOTIFICATIONS);
+    }
+};
+
+studentSchema.statics.MAX_NOTIFICATIONS = MAX_NOTIFICATIONS;
 
 module.exports = mongoose.model('Student', studentSchema);

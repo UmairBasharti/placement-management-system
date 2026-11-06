@@ -250,13 +250,13 @@ async function loadResumes() {
             <td>${esc(s.name)}</td>
             <td>${esc(s.course || 'N/A')}</td>
             <td>${esc(s.resume.name)}</td>
-            <td><span class="badge ${s.resume.approved ? 'bg-success' : 'bg-warning'}">${s.resume.approved ? 'Approved' : 'Pending'}</span></td>
+            <td><span class="badge ${{ approved: 'bg-success', rejected: 'bg-danger' }[s.resume.status] || 'bg-warning'}">${{ approved: 'Approved', rejected: 'Rejected' }[s.resume.status] || 'Pending'}</span></td>
             <td>
                 <div class="btn-group">
                     <button type="button" class="btn btn-sm btn-primary" data-resume-id="${esc(s.id)}" aria-label="View resume">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn btn-sm btn-success" onclick="approveResume('${s.id}')" ${s.resume.approved ? 'disabled' : ''}>
+                    <button class="btn btn-sm btn-success" onclick="approveResume('${s.id}')" ${s.resume.status === 'approved' ? 'disabled' : ''} aria-label="Approve resume">
                         <i class="fas fa-check"></i>
                     </button>
                     <button class="btn btn-sm btn-danger" onclick="rejectResume('${s.id}')">

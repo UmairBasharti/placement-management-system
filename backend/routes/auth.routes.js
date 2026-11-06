@@ -1,17 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { body, validationResult } = require('express-validator');
+const { body } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 const Student = require('../models/student.model');
 const { protect } = require('../middleware/auth.middleware');
+const validate = require('../middleware/validate');
 const { BRANCHES } = require('../config/constants');
-
-// Validation failures: send a readable top-level `message` (the frontend shows it) plus the details
-function validationFailed(res, errors) {
-    const list = errors.array();
-    return res.status(400).json({ success: false, message: list[0].msg, errors: list });
-}
 
 // Helper — sign JWT
 function signToken(userId) {
@@ -25,11 +20,10 @@ router.post('/register', [
     body('name').trim().notEmpty().withMessage('Name is required'),
     body('email').trim().toLowerCase().isEmail().withMessage('Valid email is required'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    body('branch').isIn(BRANCHES).withMessage(`Branch must be one of: ${BRANCHES.join(', ')}`)
+    body('branch').isIn(BRANCHES).withMessage(`Branch must be one of: ${BRANCHES.join(', ')}`),
+    validate
 ], async (req, res, next) => {
     try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) return validationFailed(res, errors);
 
         const { name, email, password, branch } = req.body;
 
@@ -67,11 +61,10 @@ router.post('/register', [
 // POST /api/auth/login
 router.post('/login', [
     body('email').trim().toLowerCase().isEmail().withMessage('Valid email is required'),
-    body('password').notEmpty().withMessage('Password is required')
+    body('password').notEmpty().withMessage('Password is required'),
+    validate
 ], async (req, res, next) => {
     try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) return validationFailed(res, errors);
 
         const { email, password } = req.body;
 

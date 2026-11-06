@@ -1,24 +1,27 @@
 const express = require('express');
-const router = express.Router();
+const { body } = require('express-validator');
 const Student = require('../models/student.model');
 const User = require('../models/user.model');
+const Event = require('../models/event.model');
 const Activity = require('../models/activity.model');
-const {
-    resumeUpload, resolveUploadPath, isPdfFile, removeFile, cleanFileName, sendResumeFile
-} = require('../utils/fileUpload');
+const { resumeUpload, isPdfBuffer, cleanFileName, saveResume, deleteResume, sendResumeFile } = require('../utils/fileUpload');
 const { protect, authorize } = require('../middleware/auth.middleware');
+const validate = require('../middleware/validate');
 
-// All student routes require authentication
-router.use(protect);
-router.use(authorize('student'));
+const router = express.Router();
+router.use(protect, authorize('student'));
 
-// GET /api/students/me — get full profile (user + student doc merged)
+async function findStudent(req, res) {
+    const student = await Student.findOne({ user: req.user._id });
+    if (!student) res.status(404).json({ success: false, message: 'Student profile not found' });
+    return student;
+}
+
+// GET /api/students/me — profile (user + student data merged)
 router.get('/me', async (req, res, next) => {
     try {
-        const student = await Student.findOne({ user: req.user._id });
-        if (!student) {
-            return res.status(404).json({ success: false, message: 'Student profile not found' });
-        }
+        const student = await findStudent(req, res);
+        if (!student) return;
 
         res.json({
             success: true,
@@ -44,21 +47,23 @@ router.get('/me', async (req, res, next) => {
 });
 
 // PUT /api/students/me — update profile fields
-router.put('/me', async (req, res, next) => {
+router.put('/me', [
+    body('name').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Name must be 1–100 characters'),
+    body('skills').optional().isString().trim().isLength({ max: 500 }).withMessage('Skills can be at most 500 characters'),
+    body('education').optional().isString().trim().isLength({ max: 1500 }).withMessage('Education can be at most 1500 characters'),
+    body('projects').optional().isString().trim().isLength({ max: 2500 }).withMessage('Projects can be at most 2500 characters'),
+    validate
+], async (req, res, next) => {
     try {
         const { name, skills, education, projects } = req.body;
 
-        // Update user's display name if provided
-        if (name) {
-            await User.findByIdAndUpdate(req.user._id, { name });
-        }
+        if (name) await User.findByIdAndUpdate(req.user._id, { name });
 
         const student = await Student.findOneAndUpdate(
             { user: req.user._id },
             { skills, education, projects },
             { new: true, runValidators: true }
         );
-
         if (!student) {
             return res.status(404).json({ success: false, message: 'Student profile not found' });
         }
@@ -69,62 +74,49 @@ router.put('/me', async (req, res, next) => {
     }
 });
 
-// POST /api/students/me/resume — upload PDF resume
+// POST /api/students/me/resume — upload a PDF (stored in GridFS; needs admin approval before applying)
 router.post('/me/resume', resumeUpload, async (req, res, next) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
-
-        // Authoritative check: the file must really be a PDF, whatever the client claimed
-        if (!(await isPdfFile(req.file.path))) {
-            await removeFile(req.file.path);
+        if (!isPdfBuffer(req.file.buffer)) {
             return res.status(400).json({ success: false, message: 'The uploaded file is not a valid PDF' });
         }
 
-        const student = await Student.findOne({ user: req.user._id });
-        if (!student) {
-            await removeFile(req.file.path);
-            return res.status(404).json({ success: false, message: 'Student profile not found' });
+        const student = await findStudent(req, res);
+        if (!student) return;
+
+        const previousFileId = student.resume && student.resume.fileId;
+        const name = cleanFileName(req.file.originalname);
+        const fileId = await saveResume(req.file.buffer, name);
+
+        try {
+            student.resume = { name, fileId, uploadedAt: new Date(), status: 'pending' };
+            await student.save();
+        } catch (err) {
+            await deleteResume(fileId);   // don't leave an orphaned file if the metadata could not be saved
+            throw err;
         }
+        await deleteResume(previousFileId);
 
-        const previousFile = student.resume && student.resume.path;
-
-        // `path` holds only the stored file name; the file is served via the authenticated route below
-        student.resume = {
-            name: cleanFileName(req.file.originalname),
-            path: req.file.filename,
-            uploadedAt: new Date(),
-            approved: false
-        };
-        await student.save();
-
-        if (previousFile) await removeFile(resolveUploadPath(previousFile));   // don't leave orphans
-
-        await Activity.create({
-            type: 'upload',
-            title: `Resume uploaded by ${req.user.name}`
-        });
+        await Activity.create({ type: 'upload', title: `Resume uploaded by ${req.user.name}` });
 
         res.json({
             success: true,
             message: 'Resume uploaded successfully',
-            data: { name: student.resume.name, uploadedAt: student.resume.uploadedAt, approved: false }
+            data: { name, uploadedAt: student.resume.uploadedAt, status: 'pending' }
         });
     } catch (error) {
-        if (req.file) await removeFile(req.file.path);
         next(error);
     }
 });
 
-// GET /api/students/me/resume/file — the student's own resume (login required)
+// GET /api/students/me/resume/file — the student's own resume
 router.get('/me/resume/file', async (req, res, next) => {
     try {
-        const student = await Student.findOne({ user: req.user._id });
-        if (!student) {
-            return res.status(404).json({ success: false, message: 'Student profile not found' });
-        }
-        sendResumeFile(res, student.resume);
+        const student = await findStudent(req, res);
+        if (student) await sendResumeFile(res, student.resume);
     } catch (error) {
         next(error);
     }
@@ -133,49 +125,44 @@ router.get('/me/resume/file', async (req, res, next) => {
 // GET /api/students/me/notifications
 router.get('/me/notifications', async (req, res, next) => {
     try {
-        const student = await Student.findOne({ user: req.user._id });
-        if (!student) {
-            return res.status(404).json({ success: false, message: 'Student profile not found' });
-        }
-        res.json({ success: true, data: student.notifications });
+        const student = await findStudent(req, res);
+        if (student) res.json({ success: true, data: student.notifications });
     } catch (error) {
         next(error);
     }
 });
 
-// PUT /api/students/me/notifications/read — mark all notifications read
+// PUT /api/students/me/notifications/read — mark all as read
 router.put('/me/notifications/read', async (req, res, next) => {
     try {
-        await Student.updateOne(
-            { user: req.user._id },
-            { $set: { 'notifications.$[].read': true } }
-        );
+        await Student.updateOne({ user: req.user._id }, { $set: { 'notifications.$[].read': true } });
         res.json({ success: true, message: 'All notifications marked as read' });
     } catch (error) {
         next(error);
     }
 });
 
-// POST /api/students/me/events — add event to personal calendar
+// POST /api/students/me/events — add an event to the personal calendar { eventId }
 router.post('/me/events', async (req, res, next) => {
     try {
-        const { title, date, description } = req.body;
-        if (!title || !date) {
-            return res.status(400).json({ success: false, message: 'Title and date are required' });
+        const { eventId } = req.body;
+        if (!eventId) {
+            return res.status(400).json({ success: false, message: 'eventId is required' });
         }
 
-        const student = await Student.findOne({ user: req.user._id });
-        if (!student) {
-            return res.status(404).json({ success: false, message: 'Student profile not found' });
+        const event = await Event.findById(eventId);   // title/date come from the stored event, not the client
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found' });
         }
 
-        // Prevent duplicate calendar entries
-        const alreadyAdded = student.events.some(e => e.title === title && e.date === date);
-        if (alreadyAdded) {
+        const student = await findStudent(req, res);
+        if (!student) return;
+
+        if (student.events.some(e => String(e.eventId) === String(event._id))) {
             return res.status(400).json({ success: false, message: 'Event already in your calendar' });
         }
 
-        student.events.push({ title, date, description, addedAt: new Date() });
+        student.events.push({ eventId: event._id, title: event.title, date: event.date, description: event.description });
         await student.save();
 
         res.json({ success: true, message: 'Event added to calendar' });
@@ -184,15 +171,14 @@ router.post('/me/events', async (req, res, next) => {
     }
 });
 
-// DELETE /api/students/me/events/:eventId — remove event from calendar
+// DELETE /api/students/me/events/:eventId — remove an event from the personal calendar
 router.delete('/me/events/:eventId', async (req, res, next) => {
     try {
-        const student = await Student.findOne({ user: req.user._id });
-        if (!student) {
-            return res.status(404).json({ success: false, message: 'Student profile not found' });
-        }
+        const student = await findStudent(req, res);
+        if (!student) return;
 
-        student.events = student.events.filter(e => e._id.toString() !== req.params.eventId);
+        const id = req.params.eventId;
+        student.events = student.events.filter(e => String(e.eventId) !== id && String(e._id) !== id);
         await student.save();
 
         res.json({ success: true, message: 'Event removed from calendar' });

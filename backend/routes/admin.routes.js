@@ -1,5 +1,4 @@
 const express = require('express');
-const router = express.Router();
 const User = require('../models/user.model');
 const Student = require('../models/student.model');
 const Application = require('../models/application.model');
@@ -8,50 +7,36 @@ const Activity = require('../models/activity.model');
 const { protect, authorize } = require('../middleware/auth.middleware');
 const { sendResumeFile } = require('../utils/fileUpload');
 
-// All admin routes require authentication + admin role
-router.use(protect);
-router.use(authorize('admin'));
+const router = express.Router();
+router.use(protect, authorize('admin'));
 
-// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+const PLACEMENT_STATUSES = ['Unplaced', 'Under Review', 'Interview Scheduled', 'Placed'];
 
-// GET /api/admin/stats — numbers for the dashboard cards + charts
+// GET /api/admin/stats — dashboard numbers and chart data
 router.get('/stats', async (req, res, next) => {
     try {
-        const [totalStudents, placedStudents, totalCompanies, totalApplications] = await Promise.all([
+        const [totalStudents, placedStudents, totalCompanies, totalApplications, statusBreakdown, branchBreakdown] = await Promise.all([
             Student.countDocuments(),
             Student.countDocuments({ status: 'Placed' }),
             Company.countDocuments({ status: 'active' }),
-            Application.countDocuments()
-        ]);
-
-        // Status breakdown for the doughnut chart
-        const statusBreakdown = await Student.aggregate([
-            { $group: { _id: '$status', count: { $sum: 1 } } }
-        ]);
-
-        // Branch breakdown for the bar chart
-        const branchBreakdown = await User.aggregate([
-            { $match: { role: 'student' } },
-            { $group: { _id: '$branch', count: { $sum: 1 } } }
+            Application.countDocuments(),
+            Student.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+            User.aggregate([
+                { $match: { role: 'student' } },
+                { $group: { _id: '$branch', count: { $sum: 1 } } }
+            ])
         ]);
 
         res.json({
             success: true,
-            data: {
-                totalStudents,
-                placedStudents,
-                totalCompanies,
-                totalApplications,
-                statusBreakdown,
-                branchBreakdown
-            }
+            data: { totalStudents, placedStudents, totalCompanies, totalApplications, statusBreakdown, branchBreakdown }
         });
     } catch (error) {
         next(error);
     }
 });
 
-// GET /api/admin/activities — last 10 activity log entries
+// GET /api/admin/activities — latest activity log entries
 router.get('/activities', async (req, res, next) => {
     try {
         const activities = await Activity.find().sort({ timestamp: -1 }).limit(10);
@@ -61,14 +46,12 @@ router.get('/activities', async (req, res, next) => {
     }
 });
 
-// ─── STUDENTS ─────────────────────────────────────────────────────────────────
-
-// GET /api/admin/students — all students with their user + profile data merged
+// GET /api/admin/students — every student with account and profile data merged
 router.get('/students', async (req, res, next) => {
     try {
         const students = await Student.find().populate('user', 'name email branch');
 
-        const formatted = students.map(s => ({
+        const data = students.filter(s => s.user).map(s => ({
             id: s._id,
             userId: s.user._id,
             name: s.user.name,
@@ -82,18 +65,17 @@ router.get('/students', async (req, res, next) => {
             statusHistory: s.statusHistory
         }));
 
-        res.json({ success: true, data: formatted });
+        res.json({ success: true, data });
     } catch (error) {
         next(error);
     }
 });
 
-// PUT /api/admin/students/:id/status — update a student's placement status
+// PUT /api/admin/students/:id/status — set a student's placement status (:id is the student id)
 router.put('/students/:id/status', async (req, res, next) => {
     try {
         const { status } = req.body;
-        const allowed = ['Unplaced', 'Under Review', 'Interview Scheduled', 'Placed'];
-        if (!allowed.includes(status)) {
+        if (!PLACEMENT_STATUSES.includes(status)) {
             return res.status(400).json({ success: false, message: 'Invalid status value' });
         }
 
@@ -102,21 +84,16 @@ router.put('/students/:id/status', async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Student not found' });
         }
 
-        student.status = status;
-        student.notifications.push({
-            message: `Your placement status has been updated to: ${status}`,
-            timestamp: new Date()
-        });
-        student.statusHistory.push({
-            status,
-            message: `Status updated by admin`,
-            timestamp: new Date()
-        });
+        if (student.status !== status) {
+            student.status = status;
+            student.statusHistory.push({ status, message: 'Status updated by admin' });
+        }
+        student.notify(`Your placement status has been updated to: ${status}`);
         await student.save();
 
         await Activity.create({
             type: 'status',
-            title: `Status updated for ${student.user.name}: ${status}`
+            title: `Status updated for ${student.user ? student.user.name : 'a student'}: ${status}`
         });
 
         res.json({ success: true, message: 'Student status updated' });
@@ -125,15 +102,12 @@ router.put('/students/:id/status', async (req, res, next) => {
     }
 });
 
-// ─── RESUMES ──────────────────────────────────────────────────────────────────
-
-// GET /api/admin/resumes — all students who have uploaded a resume
+// GET /api/admin/resumes — students who have uploaded a resume
 router.get('/resumes', async (req, res, next) => {
     try {
-        const students = await Student.find({ 'resume.path': { $ne: null } })
-            .populate('user', 'name email branch');
+        const students = await Student.find({ 'resume.fileId': { $ne: null } }).populate('user', 'name email branch');
 
-        const formatted = students.map(s => ({
+        const data = students.filter(s => s.user).map(s => ({
             id: s._id,
             name: s.user.name,
             email: s.user.email,
@@ -141,86 +115,66 @@ router.get('/resumes', async (req, res, next) => {
             resume: s.resume
         }));
 
-        res.json({ success: true, data: formatted });
+        res.json({ success: true, data });
     } catch (error) {
         next(error);
     }
 });
 
-// GET /api/admin/students/:id/resume — stream a student's resume (admin only, login required)
+// GET /api/admin/students/:id/resume — stream a student's resume PDF
 router.get('/students/:id/resume', async (req, res, next) => {
     try {
         const student = await Student.findById(req.params.id);
         if (!student) {
             return res.status(404).json({ success: false, message: 'Student not found' });
         }
-        sendResumeFile(res, student.resume);
+        await sendResumeFile(res, student.resume);
     } catch (error) {
         next(error);
     }
 });
 
-// PUT /api/admin/resumes/:id/approve
-router.put('/resumes/:id/approve', async (req, res, next) => {
-    try {
-        const student = await Student.findById(req.params.id).populate('user', 'name');
-        if (!student) {
-            return res.status(404).json({ success: false, message: 'Student not found' });
+// Approve or reject a student's resume (:id is the student id)
+function reviewResume(decision) {
+    const text = decision === 'approved'
+        ? { notice: 'Your resume has been approved', activity: 'approved' }
+        : { notice: 'Your resume has been rejected. Please upload a new one.', activity: 'rejected' };
+
+    return async (req, res, next) => {
+        try {
+            const student = await Student.findById(req.params.id).populate('user', 'name');
+            if (!student) {
+                return res.status(404).json({ success: false, message: 'Student not found' });
+            }
+            if (!student.resume || !student.resume.fileId) {
+                return res.status(400).json({ success: false, message: 'This student has not uploaded a resume' });
+            }
+
+            student.resume.status = decision;
+            student.notify(text.notice);
+            await student.save();
+
+            await Activity.create({
+                type: 'upload',
+                title: `Resume ${text.activity} for ${student.user ? student.user.name : 'a student'}`
+            });
+
+            res.json({ success: true, message: `Resume ${text.activity}` });
+        } catch (error) {
+            next(error);
         }
+    };
+}
 
-        student.resume.approved = true;
-        student.notifications.push({
-            message: 'Your resume has been approved',
-            timestamp: new Date()
-        });
-        await student.save();
+router.put('/resumes/:id/approve', reviewResume('approved'));
+router.put('/resumes/:id/reject', reviewResume('rejected'));
 
-        await Activity.create({
-            type: 'upload',
-            title: `Resume approved for ${student.user.name}`
-        });
-
-        res.json({ success: true, message: 'Resume approved' });
-    } catch (error) {
-        next(error);
-    }
-});
-
-// PUT /api/admin/resumes/:id/reject
-router.put('/resumes/:id/reject', async (req, res, next) => {
-    try {
-        const student = await Student.findById(req.params.id).populate('user', 'name');
-        if (!student) {
-            return res.status(404).json({ success: false, message: 'Student not found' });
-        }
-
-        student.resume.approved = false;
-        student.notifications.push({
-            message: 'Your resume has been rejected. Please upload a new one.',
-            timestamp: new Date()
-        });
-        await student.save();
-
-        await Activity.create({
-            type: 'upload',
-            title: `Resume rejected for ${student.user.name}`
-        });
-
-        res.json({ success: true, message: 'Resume rejected' });
-    } catch (error) {
-        next(error);
-    }
-});
-
-// ─── APPLICATIONS ─────────────────────────────────────────────────────────────
-
-// GET /api/admin/applications — all applications with student + company info
+// GET /api/admin/applications — every application with company details
 router.get('/applications', async (req, res, next) => {
     try {
         const applications = await Application.find()
             .populate('company', 'name location jobType package')
             .sort({ appliedDate: -1 });
-
         res.json({ success: true, data: applications });
     } catch (error) {
         next(error);

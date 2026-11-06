@@ -120,11 +120,22 @@ async function fetchEvents() {
     allEvents = res.data;
 }
 
-// ── profile completion calculation ────────────────────
+// ── profile completion ────────────────────────────────────────
+// Only things the student fills in count (name and course are set at registration).
+function profileChecks() {
+    const r = studentData.resume || {};
+    return {
+        skills: !!(studentData.skills || '').trim(),
+        education: !!(studentData.education || '').trim(),
+        projects: !!(studentData.projects || '').trim(),
+        resume: !!r.fileId,
+        approved: r.status === 'approved'
+    };
+}
+
 function calculateProfileCompletion() {
-    const fields = [studentData.name, studentData.course, studentData.skills,
-                    studentData.education, studentData.resume && studentData.resume.path];
-    return Math.round(fields.filter(Boolean).length / fields.length * 100);
+    const done = Object.values(profileChecks());
+    return Math.round(done.filter(Boolean).length / done.length * 100);
 }
 
 // ── dashboard ─────────────────────────────────────────────────
@@ -139,11 +150,9 @@ async function loadDashboard() {
     if (pctText) pctText.textContent = `${pct}% Complete`;
 
     // profile checklist
-    document.getElementById('check-personal').className = `fas fa-${studentData.name ? 'check-circle text-success' : 'times-circle text-danger'} me-2`;
-    document.getElementById('check-course').className = `fas fa-${studentData.course ? 'check-circle text-success' : 'times-circle text-danger'} me-2`;
-    document.getElementById('check-skills').className = `fas fa-${studentData.skills ? 'check-circle text-success' : 'times-circle text-danger'} me-2`;
-    document.getElementById('check-education').className = `fas fa-${studentData.education ? 'check-circle text-success' : 'times-circle text-danger'} me-2`;
-    document.getElementById('check-resume').className = `fas fa-${studentData.resume && studentData.resume.path ? 'check-circle text-success' : 'times-circle text-danger'} me-2`;
+    for (const [key, ok] of Object.entries(profileChecks())) {
+        document.getElementById('check-' + key).className = `fas fa-${ok ? 'check-circle text-success' : 'times-circle text-danger'} me-2`;
+    }
 
     // placement status badge
     const statusBadge = document.getElementById('current-status');
@@ -277,11 +286,16 @@ function updateResumeStatus() {
     const el = document.getElementById('resume-status');
     if (!el) return;
     const r = studentData.resume;
-    if (r && r.path) {
+    if (r && r.fileId) {
+        const look = {
+            approved: ['alert-success', 'check-circle', 'approved'],
+            pending:  ['alert-warning', 'clock', 'waiting for approval'],
+            rejected: ['alert-danger', 'times-circle', 'rejected — please upload a new one']
+        }[r.status] || ['alert-warning', 'clock', 'waiting for approval'];
         el.innerHTML = `
-            <div class="alert ${r.approved ? 'alert-success' : 'alert-warning'}">
-                <i class="fas fa-${r.approved ? 'check-circle' : 'clock'} me-2"></i>
-                Resume ${r.approved ? 'approved' : 'pending approval'}: ${esc(r.name)}
+            <div class="alert ${look[0]}">
+                <i class="fas fa-${look[1]} me-2"></i>
+                Resume ${look[2]}: ${esc(r.name)}
                 <br><small>Uploaded on: ${new Date(r.uploadedAt).toLocaleString()}</small>
             </div>`;
     } else {
@@ -293,7 +307,7 @@ function updateResumePreview() {
     const el = document.getElementById('resume-preview');
     if (!el) return;
     const r = studentData.resume;
-    if (r && r.path) {
+    if (r && r.fileId) {
         el.innerHTML = `
             <div class="d-flex flex-column align-items-center justify-content-center h-100">
                 <i class="fas fa-file-pdf fa-3x mb-3" style="color:var(--primary-color)"></i>
@@ -493,7 +507,7 @@ function updateCalendar() {
     const sorted = [...allEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
     el.innerHTML = sorted.length ? sorted.map(ev => {
         const isUpcoming = new Date(ev.date) > new Date();
-        const added = (studentData.events || []).some(e => e.title === ev.title && e.date === ev.date);
+        const added = (studentData.events || []).some(e => e.eventId === ev._id);
         return `
             <div class="calendar-event ${isUpcoming ? 'upcoming' : 'past'}">
                 <div class="d-flex justify-content-between align-items-start">
@@ -519,13 +533,13 @@ function updateCalendar() {
     }).join('') : '<div class="alert alert-secondary">No events scheduled</div>';
 }
 
-// Calendar buttons carry only the event id (data attributes) — no user text is ever
-// placed inside an inline JavaScript handler.
+// Calendar buttons carry only the event id (data attributes); the server copies the event's
+// title/date itself, so nothing typed by a user is trusted or placed in inline JavaScript.
 async function addToCalendar(ev) {
     try {
         await apiFetch('/students/me/events', {
             method: 'POST',
-            body: JSON.stringify({ title: ev.title, date: ev.date, description: ev.description })
+            body: JSON.stringify({ eventId: ev._id })
         });
         await fetchProfile();
         updateCalendar();
@@ -537,9 +551,7 @@ async function addToCalendar(ev) {
 
 async function removeFromCalendar(ev) {
     try {
-        const mine = (studentData.events || []).find(e => e.title === ev.title && e.date === ev.date);
-        if (!mine) return;
-        await apiFetch(`/students/me/events/${mine._id}`, { method: 'DELETE' });
+        await apiFetch(`/students/me/events/${ev._id}`, { method: 'DELETE' });
         await fetchProfile();
         updateCalendar();
         showNotification('Event removed from your calendar!');

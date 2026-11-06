@@ -1,29 +1,23 @@
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
+const mongoose = require('mongoose');
 
-const uploadDir = path.join(__dirname, '../uploads');
-fs.mkdirSync(uploadDir, { recursive: true });
+const MAX_SIZE = 5 * 1024 * 1024;
 
-const MAX_SIZE = 5 * 1024 * 1024;   // 5 MB cap
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    // Random name + fixed .pdf extension — never trust the client's filename or extension
-    filename: (req, file, cb) => cb(null, `${crypto.randomUUID()}.pdf`)
+// Resumes are kept in MongoDB (GridFS), not on disk, so they survive restarts and redeploys.
+// The upload is held in memory (5 MB cap) so it can be checked before anything is stored.
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: MAX_SIZE, files: 1 },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/pdf') return cb(null, true);
+        const err = new Error('Only PDF files are allowed');
+        err.code = 'INVALID_FILE_TYPE';
+        cb(err, false);
+    }
 });
 
-const fileFilter = (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') return cb(null, true);
-    const err = new Error('Only PDF files are allowed');
-    err.code = 'INVALID_FILE_TYPE';
-    cb(err, false);
-};
-
-const upload = multer({ storage, fileFilter, limits: { fileSize: MAX_SIZE, files: 1 } });
-
-// Express middleware: run multer and turn upload problems into clean 400 responses
+// Runs multer and turns upload problems into clean 400 responses
 function resumeUpload(req, res, next) {
     upload.single('resume')(req, res, (err) => {
         if (!err) return next();
@@ -38,57 +32,68 @@ function resumeUpload(req, res, next) {
     });
 }
 
-// Only ever resolve inside uploadDir (basename strips any path the database might contain)
-function resolveUploadPath(stored) {
-    return path.join(uploadDir, path.basename(String(stored)));
+// The MIME type comes from the client and can be faked, so check the real header ("%PDF-")
+function isPdfBuffer(buffer) {
+    return Buffer.isBuffer(buffer) && buffer.subarray(0, 1024).includes('%PDF-');
 }
 
-// The client-supplied MIME type can be faked, so check the file's real header: "%PDF-"
-async function isPdfFile(filePath) {
-    let handle;
-    try {
-        handle = await fs.promises.open(filePath, 'r');
-        const buf = Buffer.alloc(1024);
-        const { bytesRead } = await handle.read(buf, 0, 1024, 0);
-        return buf.subarray(0, bytesRead).includes('%PDF-');
-    } catch {
-        return false;
-    } finally {
-        if (handle) await handle.close();
-    }
-}
-
-async function removeFile(filePath) {
-    try {
-        await fs.promises.unlink(filePath);
-    } catch (err) {
-        if (err.code !== 'ENOENT') console.error('Could not delete file:', err.message);
-    }
-}
-
-// Safe display name: no path parts or control characters, bounded length
+// No path parts or control characters, bounded length
 function cleanFileName(name) {
     const base = path.basename(String(name || '')).replace(/[\x00-\x1f\x7f<>:"/\\|?*]+/g, '_').trim().slice(0, 100);
     return base || 'resume.pdf';
 }
 
-// Stream a stored resume to an already-authorised caller
-function sendResumeFile(res, resume) {
-    if (!resume || !resume.path) {
-        return res.status(404).json({ success: false, message: 'No resume uploaded' });
-    }
-    res.sendFile(resolveUploadPath(resume.path), {
-        headers: {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(cleanFileName(resume.name))}`,
-            'X-Content-Type-Options': 'nosniff',
-            'Cache-Control': 'private, no-store'
-        }
-    }, (err) => {
-        if (err && !res.headersSent) {
-            res.status(404).json({ success: false, message: 'Resume file not found' });
-        }
+let bucket;
+function getBucket() {
+    if (!bucket) bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: 'resumes' });
+    return bucket;
+}
+
+function saveResume(buffer, filename) {
+    return new Promise((resolve, reject) => {
+        const stream = getBucket().openUploadStream(filename, { contentType: 'application/pdf' });
+        stream.on('error', reject);
+        stream.on('finish', () => resolve(stream.id));
+        stream.end(buffer);
     });
 }
 
-module.exports = { resumeUpload, resolveUploadPath, isPdfFile, removeFile, cleanFileName, sendResumeFile, MAX_SIZE };
+async function deleteResume(fileId) {
+    if (!fileId) return;
+    try {
+        await getBucket().delete(fileId);
+    } catch (err) {
+        if (!/FileNotFound/i.test(err.message)) console.error('Could not delete resume file:', err.message);
+    }
+}
+
+async function resumeExists(fileId) {
+    if (!fileId) return false;
+    return (await getBucket().find({ _id: fileId }).limit(1).toArray()).length === 1;
+}
+
+async function readResume(fileId) {
+    const chunks = [];
+    for await (const chunk of getBucket().openDownloadStream(fileId)) chunks.push(chunk);
+    return Buffer.concat(chunks);
+}
+
+// Stream a stored resume to an already-authorised caller
+async function sendResumeFile(res, resume) {
+    if (!resume || !resume.fileId || !(await resumeExists(resume.fileId))) {
+        return res.status(404).json({ success: false, message: 'No resume uploaded' });
+    }
+    res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(cleanFileName(resume.name))}`,
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'private, no-store'
+    });
+    getBucket().openDownloadStream(resume.fileId)
+        .on('error', () => res.destroy())
+        .pipe(res);
+}
+
+module.exports = {
+    resumeUpload, isPdfBuffer, cleanFileName, saveResume, deleteResume, readResume, sendResumeFile, MAX_SIZE
+};

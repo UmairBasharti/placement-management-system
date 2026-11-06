@@ -52,10 +52,13 @@ router.post('/', protect, authorize('student'), async (req, res, next) => {
         }
 
         // Enforce: must have uploaded a resume, and the placement cell must have approved it
-        if (!student.resume || !student.resume.path) {
+        if (!student.resume || !student.resume.fileId) {
             return res.status(400).json({ success: false, message: 'Please upload your resume before applying' });
         }
-        if (!student.resume.approved) {
+        if (student.resume.status === 'rejected') {
+            return res.status(400).json({ success: false, message: 'Your resume was rejected — please upload a new one before applying' });
+        }
+        if (student.resume.status !== 'approved') {
             return res.status(400).json({ success: false, message: 'Your resume is waiting for approval by the placement cell — you can apply once it is approved' });
         }
 
@@ -90,10 +93,7 @@ router.post('/', protect, authorize('student'), async (req, res, next) => {
                 timestamp: new Date()
             });
         }
-        student.notifications.push({
-            message: `Your application to ${company.name} has been submitted`,
-            timestamp: new Date()
-        });
+        student.notify(`Your application to ${company.name} has been submitted`);
         await student.save();
 
         await Activity.create({
@@ -139,12 +139,7 @@ router.put('/:id/status', protect, authorize('admin'), async (req, res, next) =>
             const applications = await Application.find({ student: student._id }).select('status');
             const newStatus = afterDecision({ current: student.status, oldStatus, newStatus: status, applications });
 
-            student.notifications.push({
-                message: status === 'Pending'
-                    ? `Your application to ${companyName} was moved back to pending`
-                    : `Your application to ${companyName} was ${status.toLowerCase()}`,
-                timestamp: new Date()
-            });
+            student.notify(status === 'Pending' ? `Your application to ${companyName} was moved back to pending` : `Your application to ${companyName} was ${status.toLowerCase()}`);
 
             // The timeline records real placement-status changes only
             if (newStatus !== student.status) {
