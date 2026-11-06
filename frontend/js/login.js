@@ -42,7 +42,7 @@ function showAlert(message, type = 'danger') {
     const icon = type === 'danger' ? 'exclamation-circle' : 'check-circle';
     const div  = document.createElement('div');
     div.className = `alert alert-${type}`;
-    div.innerHTML = `<i class="fas fa-${icon}"></i> ${message}`;
+    div.innerHTML = `<i class="fas fa-${icon}"></i> ${esc(message)}`;
     document.body.appendChild(div);
 
     setTimeout(() => div.remove(), 3000);

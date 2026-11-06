@@ -44,7 +44,7 @@ function showNotification(message, type = 'success') {
     const div = document.createElement('div');
     div.className = `notification ${type}`;
     const icons = { success: 'check-circle', error: 'times-circle', warning: 'exclamation-triangle' };
-    div.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-${icons[type] || 'info-circle'} me-2"></i><span>${message}</span></div>`;
+    div.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-${icons[type] || 'info-circle'} me-2"></i><span>${esc(message)}</span></div>`;
     container.appendChild(div);
     requestAnimationFrame(() => div.classList.add('show'));
     setTimeout(() => {
@@ -216,7 +216,7 @@ function renderRecentApplications() {
     el.innerHTML = recent.length ? recent.map(app => `
         <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
             <div>
-                <h6 class="mb-0">${app.company ? app.company.name : 'Unknown'}</h6>
+                <h6 class="mb-0">${esc(app.company ? app.company.name : 'Unknown')}</h6>
                 <small class="text-muted">Applied on: ${new Date(app.appliedDate).toLocaleString()}</small>
             </div>
             <div class="status-badge status-${app.status.toLowerCase()}">
@@ -236,7 +236,7 @@ function renderUpcomingEvents() {
     el.innerHTML = upcoming.length ? upcoming.map(ev => `
         <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
             <div>
-                <h6 class="mb-0">${ev.title}</h6>
+                <h6 class="mb-0">${esc(ev.title)}</h6>
                 <small class="text-muted"><i class="fas fa-clock me-1"></i>${new Date(ev.date).toLocaleString()}</small>
             </div>
             <button class="btn btn-sm btn-outline-primary" onclick="viewEventDetails('${ev._id}')">
@@ -289,7 +289,7 @@ function updateResumeStatus() {
         el.innerHTML = `
             <div class="alert ${r.approved ? 'alert-success' : 'alert-warning'}">
                 <i class="fas fa-${r.approved ? 'check-circle' : 'clock'} me-2"></i>
-                Resume ${r.approved ? 'approved' : 'pending approval'}: ${r.name}
+                Resume ${r.approved ? 'approved' : 'pending approval'}: ${esc(r.name)}
                 <br><small>Uploaded on: ${new Date(r.uploadedAt).toLocaleString()}</small>
             </div>`;
     } else {
@@ -306,8 +306,8 @@ function updateResumePreview() {
         el.innerHTML = `
             <div class="d-flex flex-column align-items-center justify-content-center h-100">
                 <i class="fas fa-file-pdf fa-3x mb-3" style="color:var(--primary-color)"></i>
-                <p class="mb-2">${r.name}</p>
-                <a href="${r.path}" target="_blank" class="btn btn-primary">
+                <p class="mb-2">${esc(r.name)}</p>
+                <a href="${esc(r.path)}" target="_blank" rel="noopener" class="btn btn-primary">
                     <i class="fas fa-eye me-2"></i>View Resume
                 </a>
             </div>`;
@@ -374,17 +374,17 @@ function displayCompanies() {
             <div class="company-card">
                 <div class="d-flex align-items-start">
                     <div class="company-info ms-3">
-                        <h3>${company.name}</h3>
-                        <p><i class="fas fa-map-marker-alt"></i> ${company.location}</p>
-                        <p><i class="fas fa-briefcase"></i> ${company.jobType}</p>
-                        <p><i class="fas fa-rupee-sign"></i> ${company.package || 'N/A'}</p>
+                        <h3>${esc(company.name)}</h3>
+                        <p><i class="fas fa-map-marker-alt"></i> ${esc(company.location)}</p>
+                        <p><i class="fas fa-briefcase"></i> ${esc(company.jobType)}</p>
+                        <p><i class="fas fa-rupee-sign"></i> ${esc(company.package || 'N/A')}</p>
                         <p><i class="fas fa-calendar"></i> Posted: ${new Date(company.postedDate).toLocaleDateString()}</p>
                     </div>
                 </div>
-                <p class="mt-2">${company.description}</p>
+                <p class="mt-2">${esc(company.description)}</p>
                 <div class="company-tags">
-                    <span class="company-tag">${company.branches.join(', ')}</span>
-                    ${company.requirements ? `<span class="company-tag">${company.requirements}</span>` : ''}
+                    <span class="company-tag">${esc(company.branches.join(', '))}</span>
+                    ${company.requirements ? `<span class="company-tag">${esc(company.requirements)}</span>` : ''}
                 </div>
                 <div class="company-actions">
                     <button class="action-btn view-btn" onclick="viewCompanyDetails('${company._id}')">
@@ -417,18 +417,18 @@ window.viewCompanyDetails = function (companyId) {
         <div class="modal-dialog company-details-modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">${company.name}</h5>
+                    <h5 class="modal-title">${esc(company.name)}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="company-details-grid">
-                        <div class="detail-item"><label>Job Type</label><div class="value">${company.jobType}</div></div>
-                        <div class="detail-item"><label>Package</label><div class="value">${company.package || 'N/A'}</div></div>
-                        <div class="detail-item"><label>Branches</label><div class="value">${company.branches.join(', ')}</div></div>
-                        <div class="detail-item"><label>Requirements</label><div class="value">${company.requirements || 'N/A'}</div></div>
-                        <div class="detail-item"><label>Location</label><div class="value">${company.location}</div></div>
+                        <div class="detail-item"><label>Job Type</label><div class="value">${esc(company.jobType)}</div></div>
+                        <div class="detail-item"><label>Package</label><div class="value">${esc(company.package || 'N/A')}</div></div>
+                        <div class="detail-item"><label>Branches</label><div class="value">${esc(company.branches.join(', '))}</div></div>
+                        <div class="detail-item"><label>Requirements</label><div class="value">${esc(company.requirements || 'N/A')}</div></div>
+                        <div class="detail-item"><label>Location</label><div class="value">${esc(company.location)}</div></div>
                     </div>
-                    <p class="mt-3">${company.description}</p>
+                    <p class="mt-3">${esc(company.description)}</p>
                     <div class="application-info mt-4">
                         ${app ? `
                             <div class="alert ${app.status === 'Accepted' ? 'alert-success' : app.status === 'Rejected' ? 'alert-danger' : 'alert-warning'}">
@@ -490,24 +490,23 @@ function updateCalendar() {
     el.innerHTML = sorted.length ? sorted.map(ev => {
         const isUpcoming = new Date(ev.date) > new Date();
         const added = (studentData.events || []).some(e => e.title === ev.title && e.date === ev.date);
-        const safeDesc = (ev.description || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
         return `
             <div class="calendar-event ${isUpcoming ? 'upcoming' : 'past'}">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="mb-1">${ev.title}</h6>
+                        <h6 class="mb-1">${esc(ev.title)}</h6>
                         <p class="mb-0 text-muted"><small><i class="fas fa-clock me-2"></i>${new Date(ev.date).toLocaleString()}</small></p>
-                        ${ev.description ? `<p class="mt-2">${ev.description}</p>` : ''}
+                        ${ev.description ? `<p class="mt-2">${esc(ev.description)}</p>` : ''}
                         ${!isUpcoming ? '<div class="mt-2"><span class="badge bg-secondary">Past Event</span></div>' : ''}
                     </div>
                     <div class="event-actions">
                         ${isUpcoming ? `
                             <button class="btn btn-sm ${added ? 'btn-success' : 'btn-primary'}"
-                                onclick="${added ? `removeFromCalendar('${ev._id}','${ev.title}','${ev.date}')` : `addToCalendar('${ev._id}','${ev.title}','${ev.date}','${safeDesc}')`}">
+                                data-action="${added ? 'remove' : 'add'}" data-event-id="${esc(ev._id)}">
                                 <i class="fas fa-${added ? 'check' : 'calendar-plus'}"></i>
                                 ${added ? 'Added' : 'Add to Calendar'}
                             </button>` : ''}
-                        <button class="btn btn-sm btn-info" onclick="viewEventDetails('${ev._id}')">
+                        <button class="btn btn-sm btn-info" data-action="details" data-event-id="${esc(ev._id)}" aria-label="Event details">
                             <i class="fas fa-info-circle"></i>
                         </button>
                     </div>
@@ -516,11 +515,13 @@ function updateCalendar() {
     }).join('') : '<div class="alert alert-secondary">No events scheduled</div>';
 }
 
-window.addToCalendar = async function (eventId, title, date, description) {
+// Calendar buttons carry only the event id (data attributes) — no user text is ever
+// placed inside an inline JavaScript handler.
+async function addToCalendar(ev) {
     try {
         await apiFetch('/students/me/events', {
             method: 'POST',
-            body: JSON.stringify({ title, date, description })
+            body: JSON.stringify({ title: ev.title, date: ev.date, description: ev.description })
         });
         await fetchProfile();
         updateCalendar();
@@ -528,20 +529,31 @@ window.addToCalendar = async function (eventId, title, date, description) {
     } catch (err) {
         showNotification(err.message, 'error');
     }
-};
+}
 
-window.removeFromCalendar = async function (eventId, title, date) {
+async function removeFromCalendar(ev) {
     try {
-        const ev = (studentData.events || []).find(e => e.title === title && e.date === date);
-        if (!ev) return;
-        await apiFetch(`/students/me/events/${ev._id}`, { method: 'DELETE' });
+        const mine = (studentData.events || []).find(e => e.title === ev.title && e.date === ev.date);
+        if (!mine) return;
+        await apiFetch(`/students/me/events/${mine._id}`, { method: 'DELETE' });
         await fetchProfile();
         updateCalendar();
         showNotification('Event removed from your calendar!');
     } catch (err) {
         showNotification(err.message, 'error');
     }
-};
+}
+
+document.getElementById('calendar')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const ev = allEvents.find(x => x._id === btn.dataset.eventId);
+    if (!ev) return;
+    if (btn.dataset.action === 'details') { window.viewEventDetails(ev._id); return; }
+    btn.disabled = true;   // prevent double-clicks while the request runs
+    const run = btn.dataset.action === 'add' ? addToCalendar(ev) : removeFromCalendar(ev);
+    run.finally(updateCalendar);   // re-render also re-enables the button after a failure
+});
 
 window.viewEventDetails = function (eventId) {
     const ev = allEvents.find(e => e._id === eventId);
@@ -552,12 +564,12 @@ window.viewEventDetails = function (eventId) {
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">${ev.title}</h5>
+                    <h5 class="modal-title">${esc(ev.title)}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <p><strong>Date & Time:</strong> ${new Date(ev.date).toLocaleString()}</p>
-                    ${ev.description ? `<p><strong>Description:</strong> ${ev.description}</p>` : ''}
+                    ${ev.description ? `<p><strong>Description:</strong> ${esc(ev.description)}</p>` : ''}
                     <p><strong>Status:</strong> ${new Date(ev.date) > new Date() ? 'Upcoming' : 'Past'}</p>
                 </div>
                 <div class="modal-footer">
@@ -579,7 +591,7 @@ async function loadNotifications() {
     const notifs = studentData.notifications || [];
     el.innerHTML = notifs.length ? [...notifs].reverse().map(n => `
         <div class="alert alert-info">
-            <i class="fas fa-info-circle me-2"></i>${n.message}
+            <i class="fas fa-info-circle me-2"></i>${esc(n.message)}
             <br><small>${new Date(n.timestamp).toLocaleString()}</small>
         </div>`).join('') : '<div class="alert alert-secondary">No notifications yet</div>';
 }
@@ -599,7 +611,7 @@ function updateStatusTimeline() {
             <div class="timeline-content">
                 <h6 class="mb-1">${h.status}</h6>
                 <p class="mb-0 text-muted"><small>${new Date(h.timestamp).toLocaleString()}</small></p>
-                ${h.message ? `<p class="mt-2">${h.message}</p>` : ''}
+                ${h.message ? `<p class="mt-2">${esc(h.message)}</p>` : ''}
             </div>
         </div>`).join('') : '<div class="text-center text-muted"><i class="fas fa-history fa-3x mb-3"></i><p>No status history yet</p></div>';
 }

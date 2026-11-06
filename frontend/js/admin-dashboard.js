@@ -167,7 +167,7 @@ function updateActivities(activities) {
                     <i class="fas fa-${iconMap[a.type] || 'info-circle'}"></i>
                 </div>
                 <div>
-                    <h6 class="mb-1">${a.title}</h6>
+                    <h6 class="mb-1">${esc(a.title)}</h6>
                     <p class="mb-0 text-muted"><small>${new Date(a.timestamp).toLocaleString()}</small></p>
                 </div>
             </div>
@@ -199,10 +199,10 @@ function updateStudentsList() {
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card student-card">
                 <div class="card-body">
-                    <h5 class="card-title">${s.name}</h5>
+                    <h5 class="card-title">${esc(s.name)}</h5>
                     <p class="card-text">
-                        <small class="text-muted">${s.email}</small><br>
-                        <span class="badge bg-secondary">${s.course || 'N/A'}</span>
+                        <small class="text-muted">${esc(s.email)}</small><br>
+                        <span class="badge bg-secondary">${esc(s.course || 'N/A')}</span>
                         <span class="status-badge status-${(s.status||'').toLowerCase().replace(/ /g,'-')}">
                             <i class="fas fa-circle"></i> ${s.status}
                         </span>
@@ -258,13 +258,13 @@ async function loadResumes() {
     if (!el) return;
     el.innerHTML = res.data.map(s => `
         <tr>
-            <td>${s.name}</td>
-            <td>${s.course || 'N/A'}</td>
-            <td>${s.resume.name}</td>
+            <td>${esc(s.name)}</td>
+            <td>${esc(s.course || 'N/A')}</td>
+            <td>${esc(s.resume.name)}</td>
             <td><span class="badge ${s.resume.approved ? 'bg-success' : 'bg-warning'}">${s.resume.approved ? 'Approved' : 'Pending'}</span></td>
             <td>
                 <div class="btn-group">
-                    <a href="${s.resume.path}" target="_blank" class="btn btn-sm btn-primary">
+                    <a href="${esc(s.resume.path)}" target="_blank" rel="noopener" class="btn btn-sm btn-primary" aria-label="View resume">
                         <i class="fas fa-eye"></i>
                     </a>
                     <button class="btn btn-sm btn-success" onclick="approveResume('${s.id}')" ${s.resume.approved ? 'disabled' : ''}>
@@ -334,16 +334,16 @@ function displayCompanies() {
         <div class="company-card">
             <div class="d-flex align-items-start">
                 <div class="company-info ms-3">
-                    <h3>${c.name}</h3>
-                    <p><i class="fas fa-map-marker-alt"></i> ${c.location}</p>
-                    <p><i class="fas fa-briefcase"></i> ${c.jobType}</p>
-                    <p><i class="fas fa-rupee-sign"></i> ${c.package || 'N/A'}</p>
+                    <h3>${esc(c.name)}</h3>
+                    <p><i class="fas fa-map-marker-alt"></i> ${esc(c.location)}</p>
+                    <p><i class="fas fa-briefcase"></i> ${esc(c.jobType)}</p>
+                    <p><i class="fas fa-rupee-sign"></i> ${esc(c.package || 'N/A')}</p>
                 </div>
             </div>
-            <p class="mt-2">${c.description}</p>
+            <p class="mt-2">${esc(c.description)}</p>
             <div class="company-tags">
-                <span class="company-tag">${c.branches.join(', ')}</span>
-                ${c.requirements ? `<span class="company-tag">${c.requirements}</span>` : ''}
+                <span class="company-tag">${esc(c.branches.join(', '))}</span>
+                ${c.requirements ? `<span class="company-tag">${esc(c.requirements)}</span>` : ''}
             </div>
             <div class="company-actions">
                 <button class="action-btn view-btn" onclick="viewCompanyDetails('${c._id}')">
@@ -369,15 +369,15 @@ window.viewCompanyDetails = function (companyId) {
         <div class="modal-dialog company-details-modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">${company.name}</h5>
+                    <h5 class="modal-title">${esc(company.name)}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="company-details-grid">
-                        <div class="detail-item"><label>Job Type</label><div class="value">${company.jobType}</div></div>
-                        <div class="detail-item"><label>Package</label><div class="value">${company.package || 'N/A'}</div></div>
-                        <div class="detail-item"><label>Branches</label><div class="value">${company.branches.join(', ')}</div></div>
-                        <div class="detail-item"><label>Requirements</label><div class="value">${company.requirements || 'N/A'}</div></div>
+                        <div class="detail-item"><label>Job Type</label><div class="value">${esc(company.jobType)}</div></div>
+                        <div class="detail-item"><label>Package</label><div class="value">${esc(company.package || 'N/A')}</div></div>
+                        <div class="detail-item"><label>Branches</label><div class="value">${esc(company.branches.join(', '))}</div></div>
+                        <div class="detail-item"><label>Requirements</label><div class="value">${esc(company.requirements || 'N/A')}</div></div>
                         <div class="detail-item"><label>Posted Date</label><div class="value">${new Date(company.postedDate).toLocaleDateString()}</div></div>
                     </div>
                     <div class="company-stats mt-3">
@@ -470,9 +470,9 @@ function displayApplications() {
         <div class="application-card">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <h4>${app.studentName}</h4>
-                    <p class="text-muted">${app.studentEmail}</p>
-                    <p><strong>Company:</strong> ${app.company ? app.company.name : 'N/A'}</p>
+                    <h4>${esc(app.studentName)}</h4>
+                    <p class="text-muted">${esc(app.studentEmail)}</p>
+                    <p><strong>Company:</strong> ${esc(app.company ? app.company.name : 'N/A')}</p>
                     <p><strong>Applied on:</strong> ${new Date(app.appliedDate).toLocaleString()}</p>
                 </div>
                 <div class="application-status">
@@ -526,9 +526,9 @@ function updateCalendar() {
             <div class="calendar-event ${isUpcoming ? 'upcoming' : 'past'}">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="mb-1">${ev.title}</h6>
+                        <h6 class="mb-1">${esc(ev.title)}</h6>
                         <p class="mb-0 text-muted"><small><i class="fas fa-clock me-2"></i>${new Date(ev.date).toLocaleString()}</small></p>
-                        ${ev.description ? `<p class="mt-2">${ev.description}</p>` : ''}
+                        ${ev.description ? `<p class="mt-2">${esc(ev.description)}</p>` : ''}
                         ${!isUpcoming ? '<div class="mt-2"><span class="badge bg-secondary">Past Event</span></div>' : ''}
                     </div>
                     <div class="btn-group">

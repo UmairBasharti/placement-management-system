@@ -62,7 +62,7 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 - **Evidence:** a company description containing `<img src=x onerror=…>` executed twice on the student page.
 - **Impact:** JWT lives in `localStorage` → a student registering with a malicious *name* steals the admin's token when the admin opens Students / Activities / Applications.
 - **Fix:** add one `escapeHtml()` helper (shared file, see Q1) and wrap every interpolated value, or build DOM with `textContent`. Replace inline `onclick="fn('${id}')"` with `data-id` attributes + event delegation (also fixes F2).
-- [ ] **Done when:** a company description / student name of `<img src=x onerror=alert(1)>` renders as literal text on both dashboards.
+- [x] **Done when:** a company description / student name of `<img src=x onerror=alert(1)>` renders as literal text on both dashboards. — **DONE 2026-11-06 (commit "S1 + F2")**: new `frontend/js/utils.js` exposes `esc()`; every user/admin-entered field in `student-dashboard.js`, `admin-dashboard.js` and `login.js` templates is escaped; resume links get `rel="noopener"`. Tested in headless Chrome with a payload injected into every text field (names, emails, company/event text, notifications, activities, resume names): payload never executed on any section or modal and appeared as literal text. **Remaining inline `onclick`s** only carry server-generated Mongo ObjectIds (not user text) and are left for the shared-utils refactor (Q1); enum values (status) are not escaped because the server validates them.
 
 ### S2 🔴 [C] Upload accepts any file type and keeps the client's extension
 - **Where:** [backend/utils/fileUpload.js:16](backend/utils/fileUpload.js#L16) (`path.extname(file.originalname)`), [:22](backend/utils/fileUpload.js#L22) (only checks client-sent MIME); served from same origin by [server.js:24](backend/server.js#L24).
@@ -149,7 +149,7 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 
 ### F2 🟠 [V] Calendar "Add / Remove" buttons break on apostrophes and newlines
 - [student-dashboard.js:493-506](frontend/js/student-dashboard.js#L493): an event titled `Alumni's Meet` → `SyntaxError: missing ) after argument list`; the button is dead. Fix via data-attributes + delegation (S1); reference events by `_id` (see B15).
-- [ ] Done when: the `Alumni's Meet` event can be added and removed.
+- [x] Done when: the `Alumni's Meet` event can be added and removed. — **DONE 2026-11-06 with S1**: calendar buttons now use `data-action` / `data-event-id` + one delegated click handler (no text inside inline JS), button disables during the request and re-enables after a failure. Verified: clicking Add on the apostrophe-titled event sends `POST /api/students/me/events`.
 
 ### F3 🟠 [V] Login/Register button vanishes while loading
 - `setLoading` adds the class `loading` ([login.js:56](frontend/js/login.js#L56)), which collides with the global overlay rule `.loading { display:none; position:fixed; … }` ([common.css:149](frontend/css/common.css#L149)). Computed `display` = `none`, so the spinner never shows. → rename to `is-loading` / `btn-loading`.
