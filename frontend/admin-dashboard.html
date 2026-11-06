@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - PMS</title>
+    <meta name="description" content="Admin dashboard for the Placement Management System — manage students, companies, resumes, and events.">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha384-nRgPTkuX86pH8yjPJUAFuASXQSSl2/bBUiNV47vSYpKFxHJhbcrGnmlYpYJMeD7a" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js" integrity="sha384-Emf5ZVIUiarAdhkgtqK+5/Z5qIvM6QoVrS+qAVtfyZVuD5lIHrac0me485+Antp0" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/admin-dashboard.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <h4 class="mb-4">PMS Admin</h4>
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="#" data-section="dashboard">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                    <a class="nav-link" href="#" data-section="companies">
+                        <i class="fas fa-building"></i> Companies
+                    </a>
+                    <a class="nav-link" href="#" data-section="students">
+                        <i class="fas fa-users"></i> Students
+                    </a>
+                    <a class="nav-link" href="#" data-section="resumes">
+                        <i class="fas fa-file-alt"></i> Resumes
+                    </a>
+                    <a class="nav-link" href="#" data-section="calendar">
+                        <i class="fas fa-calendar"></i> Calendar
+                    </a>
+                    <a class="nav-link" href="#" id="logout">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 id="section-title">Admin Dashboard</h2>
+                    <button class="btn btn-primary" id="export-data">
+                        <i class="fas fa-download me-2"></i> Export Data
+                    </button>
+                </div>
+
+                <!-- Dashboard Section -->
+                <div id="dashboard-section" class="section">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Placement Statistics</h5>
+                                    <div class="chart-container">
+                                        <canvas id="placementChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Course-wise Distribution</h5>
+                                    <div class="chart-container">
+                                        <canvas id="courseChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Recent Activities</h5>
+                                    <div id="recent-activities">
+                                        <!-- Activities will be dynamically added -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Companies Section -->
+                <div id="companies-section" class="section" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2>Company Management</h2>
+                        <button class="btn btn-primary" onclick="showAddCompanyForm()">
+                            <i class="fas fa-plus"></i> Add New Company
+                        </button>
+                    </div>
+
+                    <div class="company-filters">
+                        <div class="filter-group">
+                            <input type="text" class="form-control" id="search-company" placeholder="Search companies...">
+                            <select class="form-select" id="filter-job-type">
+                                <option value="">All Job Types</option>
+                                <option value="Full Time">Full Time</option>
+                                <!-- Fix #14: Part Time option added -->
+                                <option value="Part Time">Part Time</option>
+                                <option value="Internship">Internship</option>
+                            </select>
+                            <select class="form-select" id="filter-branch">
+                                <option value="">All Branches</option>
+                                <option value="MCA">MCA</option>
+                                <option value="MBA">MBA</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <select class="form-select" id="sort-companies">
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="name-asc">Name (A-Z)</option>
+                                <option value="name-desc">Name (Z-A)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="add-company-form" class="add-company-form mb-4" style="display: none;">
+                        <h3 class="mb-4">Add New Company</h3>
+                        <form id="company-form">
+                            <div class="form-group">
+                                <label>Company Name</label>
+                                <input type="text" class="form-control" id="company-name" required>
+                            </div>
+                            <!-- Fix #13: removed company-logo field (model has no logo field) -->
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea class="form-control" id="company-description" rows="3" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Location</label>
+                                <input type="text" class="form-control" id="company-location" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Job Type</label>
+                                <!-- Fix #14: Part Time option added -->
+                                <select class="form-control" id="company-job-type" required>
+                                    <option value="Full Time">Full Time</option>
+                                    <option value="Part Time">Part Time</option>
+                                    <option value="Internship">Internship</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Branches</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="branch-mca" value="MCA">
+                                        <label class="form-check-label" for="branch-mca">MCA</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="branch-mba" value="MBA">
+                                        <label class="form-check-label" for="branch-mba">MBA</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Requirements</label>
+                                <input type="text" class="form-control" id="company-requirements" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Package</label>
+                                <input type="text" class="form-control" id="company-package" required>
+                            </div>
+                            <button type="submit" class="submit-btn">Add Company</button>
+                        </form>
+                    </div>
+
+                    <div id="companies-list">
+                        <!-- Companies will be dynamically added here -->
+                    </div>
+
+                    <div class="mt-4">
+                        <h3>Applications</h3>
+                        <div id="applications-list">
+                            <!-- Applications will be dynamically added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Students Section -->
+                <div id="students-section" class="section" style="display: none;">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="search-box">
+                                        <i class="fas fa-search"></i>
+                                        <input type="text" class="form-control" id="search-students" placeholder="Search students...">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex gap-2">
+                                        <select class="form-select" id="filter-course">
+                                            <option value="">All Courses</option>
+                                            <option value="MCA">MCA</option>
+                                            <option value="MBA">MBA</option>
+                                        </select>
+                                        <select class="form-select" id="filter-status">
+                                            <option value="">All Status</option>
+                                            <option value="Unplaced">Unplaced</option>
+                                            <option value="Under Review">Under Review</option>
+                                            <option value="Interview Scheduled">Interview Scheduled</option>
+                                            <option value="Placed">Placed</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" id="students-list">
+                                <!-- Students will be dynamically added -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumes Section -->
+                <div id="resumes-section" class="section" style="display: none;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Resume Approvals</h5>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Student</th>
+                                            <th>Course</th>
+                                            <th>Resume</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="resumes-list">
+                                        <!-- Resumes will be dynamically added -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendar Section -->
+                <div id="calendar-section" class="section" style="display: none;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Upcoming Events</h5>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div id="calendar">
+                                        <!-- Calendar will be dynamically generated -->
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6>Add New Event</h6>
+                                            <form id="event-form">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Event Title</label>
+                                                    <input type="text" class="form-control" id="event-title" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Date & Time</label>
+                                                    <input type="datetime-local" class="form-control" id="event-date" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Description</label>
+                                                    <textarea class="form-control" id="event-description" rows="3"></textarea>
+                                                </div>
+                                                <button type="submit" class="btn btn-primary">Add Event</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="#">About Us</a>
+                <a href="#">Contact</a>
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+            </div>
+            <div class="footer-social">
+                <a href="#"><i class="fab fa-facebook"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-linkedin"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+            </div>
+            <div>
+                &copy; 2024 Placement Management System. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <script src="js/admin-dashboard.js"></script>
+</body>
+</html>
