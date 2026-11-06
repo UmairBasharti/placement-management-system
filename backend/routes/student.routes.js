@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const path = require('path');
 const Student = require('../models/student.model');
 const User = require('../models/user.model');
-const Application = require('../models/application.model');
 const Activity = require('../models/activity.model');
-const upload = require('../utils/fileUpload');
+const {
+    resumeUpload, resolveUploadPath, isPdfFile, removeFile, cleanFileName, sendResumeFile
+} = require('../utils/fileUpload');
 const { protect, authorize } = require('../middleware/auth.middleware');
 
 // All student routes require authentication
@@ -70,37 +70,63 @@ router.put('/me', async (req, res) => {
 });
 
 // POST /api/students/me/resume — upload PDF resume
-router.post('/me/resume', upload.single('resume'), async (req, res) => {
+router.post('/me/resume', resumeUpload, async (req, res, next) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
-        const resumeData = {
-            name: req.file.originalname,
-            path: `/uploads/${req.file.filename}`,
+        // Authoritative check: the file must really be a PDF, whatever the client claimed
+        if (!(await isPdfFile(req.file.path))) {
+            await removeFile(req.file.path);
+            return res.status(400).json({ success: false, message: 'The uploaded file is not a valid PDF' });
+        }
+
+        const student = await Student.findOne({ user: req.user._id });
+        if (!student) {
+            await removeFile(req.file.path);
+            return res.status(404).json({ success: false, message: 'Student profile not found' });
+        }
+
+        const previousFile = student.resume && student.resume.path;
+
+        // `path` holds only the stored file name; the file is served via the authenticated route below
+        student.resume = {
+            name: cleanFileName(req.file.originalname),
+            path: req.file.filename,
             uploadedAt: new Date(),
             approved: false
         };
+        await student.save();
 
-        const student = await Student.findOneAndUpdate(
-            { user: req.user._id },
-            { resume: resumeData },
-            { new: true }
-        );
-
-        if (!student) {
-            return res.status(404).json({ success: false, message: 'Student profile not found' });
-        }
+        if (previousFile) await removeFile(resolveUploadPath(previousFile));   // don't leave orphans
 
         await Activity.create({
             type: 'upload',
             title: `Resume uploaded by ${req.user.name}`
         });
 
-        res.json({ success: true, message: 'Resume uploaded successfully', data: resumeData });
+        res.json({
+            success: true,
+            message: 'Resume uploaded successfully',
+            data: { name: student.resume.name, uploadedAt: student.resume.uploadedAt, approved: false }
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        if (req.file) await removeFile(req.file.path);
+        next(error);
+    }
+});
+
+// GET /api/students/me/resume/file — the student's own resume (login required)
+router.get('/me/resume/file', async (req, res, next) => {
+    try {
+        const student = await Student.findOne({ user: req.user._id });
+        if (!student) {
+            return res.status(404).json({ success: false, message: 'Student profile not found' });
+        }
+        sendResumeFile(res, student.resume);
+    } catch (error) {
+        next(error);
     }
 });
 

@@ -307,20 +307,32 @@ function updateResumePreview() {
             <div class="d-flex flex-column align-items-center justify-content-center h-100">
                 <i class="fas fa-file-pdf fa-3x mb-3" style="color:var(--primary-color)"></i>
                 <p class="mb-2">${esc(r.name)}</p>
-                <a href="${esc(r.path)}" target="_blank" rel="noopener" class="btn btn-primary">
+                <button type="button" class="btn btn-primary" data-action="open-resume">
                     <i class="fas fa-eye me-2"></i>View Resume
-                </a>
+                </button>
             </div>`;
     } else {
         el.innerHTML = `<div class="text-center text-muted"><i class="fas fa-file-alt fa-3x mb-3"></i><p>No resume uploaded yet</p></div>`;
     }
 }
 
+// "View Resume" — fetched with the login token (the file is not publicly accessible)
+document.getElementById('resume-preview')?.addEventListener('click', async (e) => {
+    if (!e.target.closest('[data-action="open-resume"]')) return;
+    try {
+        await openProtectedPdf('/students/me/resume/file');
+    } catch (err) {
+        showNotification(err.message, 'error');
+    }
+});
+
 // Resume upload — uses FormData (multipart) instead of base64
 document.getElementById('resume-form').addEventListener('submit', async function (e) {
     e.preventDefault();
     const file = document.getElementById('resume-file').files[0];
     if (!file) return;
+    if (!/\.pdf$/i.test(file.name)) { showNotification('Please choose a PDF file', 'error'); return; }
+    if (file.size > 5 * 1024 * 1024) { showNotification('File too large (maximum 5 MB)', 'error'); return; }
 
     const token = localStorage.getItem('token');
     const formData = new FormData();

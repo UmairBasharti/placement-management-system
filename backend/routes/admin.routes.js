@@ -6,6 +6,7 @@ const Application = require('../models/application.model');
 const Company = require('../models/company.model');
 const Activity = require('../models/activity.model');
 const { protect, authorize } = require('../middleware/auth.middleware');
+const { sendResumeFile } = require('../utils/fileUpload');
 
 // All admin routes require authentication + admin role
 router.use(protect);
@@ -143,6 +144,19 @@ router.get('/resumes', async (req, res) => {
         res.json({ success: true, data: formatted });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// GET /api/admin/students/:id/resume — stream a student's resume (admin only, login required)
+router.get('/students/:id/resume', async (req, res, next) => {
+    try {
+        const student = await Student.findById(req.params.id);
+        if (!student) {
+            return res.status(404).json({ success: false, message: 'Student not found' });
+        }
+        sendResumeFile(res, student.resume);
+    } catch (error) {
+        next(error);
     }
 });
 

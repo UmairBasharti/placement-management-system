@@ -68,13 +68,13 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 - **Where:** [backend/utils/fileUpload.js:16](backend/utils/fileUpload.js#L16) (`path.extname(file.originalname)`), [:22](backend/utils/fileUpload.js#L22) (only checks client-sent MIME); served from same origin by [server.js:24](backend/server.js#L24).
 - **Impact:** upload `x.html` with `Content-Type: application/pdf` → saved as `.html`, served as `text/html` on your origin → script runs when the admin clicks "view resume".
 - **Fix:** always save as `.pdf`; verify magic bytes `%PDF-` after upload (delete + 400 if not); serve with `Content-Disposition` / `X-Content-Type-Options: nosniff`.
-- [ ] **Done when:** uploading a renamed HTML file is rejected with 400 and nothing is written to disk.
+- [x] **Done when:** uploading a renamed HTML file is rejected with 400 and nothing is written to disk. — **DONE 2026-11-06 (commit "S2 + S3 + B5")**: files are saved as `<random-uuid>.pdf` (client name/extension never used), the real `%PDF-` header is verified after upload (invalid → deleted + 400), MIME/size/no-file errors are clean 400s (also closes **B5**), previous resume file is deleted on re-upload, Multer upgraded to **2.5.0**, display name sanitised. Backend e2e test: 19/19 checks passed against Atlas (disguised `.html`, fake `.pdf`, wrong MIME, >5 MB, no file → all rejected, nothing left on disk).
 
 ### S3 🔴 [V] Resumes are publicly downloadable
 - **Where:** [server.js:24](backend/server.js#L24) `express.static('uploads')`.
 - **Evidence:** `GET /uploads/<file>.pdf` → `200 application/pdf` with no token.
 - **Fix:** remove the static mount; add `GET /api/students/:id/resume` (admin, or the owner) that streams the file after `protect`. Frontend fetches as blob → `URL.createObjectURL` (a plain `<a href>` can't send the Bearer header). Use random filenames (`crypto.randomUUID()`), not `userId-timestamp`.
-- [ ] **Done when:** the old `/uploads/...` URL returns 404 and an unauthenticated API call returns 401.
+- [x] **Done when:** the old `/uploads/...` URL returns 404 and an unauthenticated API call returns 401. — **DONE 2026-11-06 (with S2)**: static `/uploads` mount removed; resumes are served only by `GET /api/students/me/resume/file` (owner) and `GET /api/admin/students/:id/resume` (admin) with `nosniff` + `private, no-store`. Verified: no token → 401; another student → 404 (never someone else's file); student on admin route → 403; admin → 200. Frontend "View Resume" now fetches with the token and opens a blob URL (`openProtectedPdf` in `utils.js`) — verified in a real browser for both roles. _Caveat:_ until **C1** is fixed, the old `/uploads/<file>` URL answers with the home page (HTTP 200, HTML) instead of a 404 — but never the PDF.
 
 ### S4 🟠 [V] Admin-private company notes are sent to students _(confirmed live against Atlas 2026-11-06: a student's `GET /api/companies` items include the `notes` key)_
 - **Where:** [company.routes.js:19](backend/routes/company.routes.js#L19) and [:30](backend/routes/company.routes.js#L30) return full documents including `notes`.
@@ -218,7 +218,7 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 | ~~B2~~ | — | **NOT A BUG** | ~~Login/duplicate check are case-sensitive~~ — **disproved 2026-11-06 against Atlas:** `Rahul@pms.com` logs in fine (HTTP 200) and registering `Rahul@pms.com` returns "Email already registered". Mongoose runs the schema's `lowercase` setter on query filters too. Still worth adding `.normalizeEmail()`/`trim()` in the validators for tidy input, but nothing is broken | [auth.routes.js:35,70](backend/routes/auth.routes.js#L35) | Optional tidy-up only |
 | B3 | 🟠 | [C] | User created, then Student creation fails → orphan account that can log in but always 404s | [auth.routes.js:40-43](backend/routes/auth.routes.js#L40) | Transaction, or delete the user on failure |
 | B4 | 🟠 | [V] | Validation failures return `{errors:[…]}` with no `message` → frontend shows "Request failed" | [auth.routes.js:26,64](backend/routes/auth.routes.js#L26) | Return `message: errors.array()[0].msg` too |
-| B5 | 🟠 | [C] | Multer errors (wrong type, >5 MB) → 500 "Internal Server Error" | [student.routes.js:73](backend/routes/student.routes.js#L73) | Handle `MulterError` → 400 with a clear message |
+| B5 | ✅ | **DONE 2026-11-06 (with S2)** | ~~Multer errors (wrong type, >5 MB) → 500~~ — now clean 400 messages, verified | [student.routes.js:73](backend/routes/student.routes.js#L73) | Handle `MulterError` → 400 with a clear message |
 | B6 | 🟠 | [C] | Any new application resets status to "Under Review", **downgrading Placed / Interview Scheduled** students | [application.routes.js:72](backend/routes/application.routes.js#L72) | Only change status if currently `Unplaced` |
 | B7 | 🟠 | [C] | Rejecting a Pending application sets the student to "Unplaced" even if accepted elsewhere; history entries are added when nothing changed; Accepted→Pending doesn't undo Placed | [application.routes.js:119-134](backend/routes/application.routes.js#L119) | Derive student status from all their applications |
 | B8 | 🟠 | [C] | Apply skips eligibility: branch, `company.status === 'active'`, resume approved (the home page promises "admin-approved resumes") | [application.routes.js:35-53](backend/routes/application.routes.js#L35) | Add the 3 checks |
@@ -455,7 +455,7 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 - ✅ Step 2 done — in-range updates + `npm audit fix` (express 4.22.3, mongoose 7.8.13); `"engines": { "node": ">=20.19" }` added to `package.json`. Backup of the old `package.json`/lockfile is in the scratchpad `backup-deps/`.
 - ✅ Step 3 done — all 4 HTML pages now use pinned CDN files with SRI: Bootstrap **5.3.8**, Font Awesome **6.7.2**, Chart.js **4.6.1**. Verified in headless Chrome: no blocked assets, no console errors, Chart.js reports 4.6.1, FA font loads, logo loads (256 px).
 - ⏳ Step 1 (Node LTS) — **owner action:** install Node 24 or 26 LTS from nodejs.org (you run v25.5.0, a short-lived "Current" release). The app works on 25 meanwhile.
-- ⏳ Step 4 (majors: multer 2 → express 5 → mongoose 9) — deferred, one commit each.
+- ✅ Multer **2.5.0** done (with S2). ⏳ Step 4 remaining majors (express 5 → mongoose 9) — deferred, one commit each.
 - ℹ️ The `punycode` deprecation warning printed at startup comes from a transitive dependency on Node 25; harmless, expected to disappear after the Mongoose major upgrade / Node LTS.
 
 - [ ] **Done when:** `npm outdated` shows only deliberately deferred majors, `npm audit --omit=dev` is clean, and every CDN URL is pinned with an SRI hash.

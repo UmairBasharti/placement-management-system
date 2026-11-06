@@ -264,9 +264,9 @@ async function loadResumes() {
             <td><span class="badge ${s.resume.approved ? 'bg-success' : 'bg-warning'}">${s.resume.approved ? 'Approved' : 'Pending'}</span></td>
             <td>
                 <div class="btn-group">
-                    <a href="${esc(s.resume.path)}" target="_blank" rel="noopener" class="btn btn-sm btn-primary" aria-label="View resume">
+                    <button type="button" class="btn btn-sm btn-primary" data-resume-id="${esc(s.id)}" aria-label="View resume">
                         <i class="fas fa-eye"></i>
-                    </a>
+                    </button>
                     <button class="btn btn-sm btn-success" onclick="approveResume('${s.id}')" ${s.resume.approved ? 'disabled' : ''}>
                         <i class="fas fa-check"></i>
                     </button>
@@ -277,6 +277,17 @@ async function loadResumes() {
             </td>
         </tr>`).join('');
 }
+
+// "View resume" — fetched with the admin token (files are not publicly accessible)
+document.getElementById('resumes-list')?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-resume-id]');
+    if (!btn) return;
+    try {
+        await openProtectedPdf(`/admin/students/${btn.dataset.resumeId}/resume`);
+    } catch (err) {
+        showNotification(err.message, 'error');
+    }
+});
 
 window.approveResume = async function (studentId) {
     try {

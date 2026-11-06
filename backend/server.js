@@ -28,8 +28,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded files (resumes)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// NOTE: uploads/ is deliberately NOT served statically — resumes are personal data and are
+// only available through the authenticated /resume routes (student own file, admin any).
 
 // Serve frontend static files from the frontend/ directory
 app.use(express.static(path.join(__dirname, '../frontend')));
