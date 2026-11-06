@@ -6,6 +6,7 @@ const Company = require('../models/company.model');
 const Activity = require('../models/activity.model');
 const { protect, authorize } = require('../middleware/auth.middleware');
 const { afterApply, afterDecision } = require('../utils/placementStatus');
+const { isObjectIdString } = require('../utils/objectId');
 
 // GET /api/applications/my — student: get own applications
 router.get('/my', protect, authorize('student'), async (req, res, next) => {
@@ -31,6 +32,9 @@ router.post('/', protect, authorize('student'), async (req, res, next) => {
         const { companyId } = req.body;
         if (!companyId) {
             return res.status(400).json({ success: false, message: 'Company ID is required' });
+        }
+        if (!isObjectIdString(companyId)) {
+            return res.status(400).json({ success: false, message: 'Invalid id' });
         }
 
         const company = await Company.findById(companyId);

@@ -17,7 +17,7 @@ exports.protect = async (req, res, next) => {
 
         let decoded;
         try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET);
+            decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
         } catch (err) {
             return res.status(401).json({
                 success: false,

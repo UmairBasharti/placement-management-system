@@ -1,7 +1,7 @@
 const express = require('express');
 const Student = require('../models/student.model');
 const Company = require('../models/company.model');
-const { BRANCHES, JOB_TYPES } = require('../config/constants');
+const { BRANCHES, JOB_TYPES, PASSWORD_MIN, PASSWORD_MAX } = require('../config/constants');
 
 const router = express.Router();
 
@@ -20,10 +20,10 @@ router.get('/stats', async (req, res, next) => {
     }
 });
 
-// GET /api/public/meta — option lists used by the forms (branches, job types)
+// GET /api/public/meta — option lists and limits used by the forms (branches, job types, password length)
 router.get('/meta', (req, res) => {
     res.set('Cache-Control', 'public, max-age=300');
-    res.json({ success: true, data: { branches: BRANCHES, jobTypes: JOB_TYPES } });
+    res.json({ success: true, data: { branches: BRANCHES, jobTypes: JOB_TYPES, passwordMin: PASSWORD_MIN, passwordMax: PASSWORD_MAX } });
 });
 
 module.exports = router;

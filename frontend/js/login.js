@@ -72,10 +72,14 @@ document.querySelectorAll('.toggle-password').forEach((button) => {
     });
 });
 
-// Course list from the server (the HTML keeps a fallback)
+// Course list and password limits from the server (the HTML and these defaults are the fallback)
+let passwordMin = 8;
+let passwordMax = 72;
 fetch('/api/public/meta')
     .then((res) => res.json())
     .then(({ data }) => {
+        passwordMin = data.passwordMin || passwordMin;
+        passwordMax = data.passwordMax || passwordMax;
         const select = $('register-branch');
         if (!select || !data.branches.length) return;
         select.length = 1;   // keep the "Select your course" placeholder
@@ -92,7 +96,7 @@ $('register-form')?.addEventListener('submit', async (e) => {
     const branch = $('register-branch').value;
 
     if (!name || !email || !branch) return showAlert('Please fill in every field.');
-    if (password.length < 6) return showAlert('Password must be at least 6 characters.');
+    if (password.length < passwordMin || password.length > passwordMax) return showAlert(`Password must be ${passwordMin}-${passwordMax} characters.`);
     if (password !== $('register-confirm-password').value) return showAlert('The two passwords do not match.');
 
     const button = e.target.querySelector('button[type="submit"]');

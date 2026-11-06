@@ -8,6 +8,7 @@ const { resumeUpload, isPdfBuffer, cleanFileName, saveResume, deleteResume, read
 const { extractPdfText, parseResume, ResumeReadError } = require('../utils/resumeParser');
 const { protect, authorize } = require('../middleware/auth.middleware');
 const validate = require('../middleware/validate');
+const { isObjectIdString } = require('../utils/objectId');
 
 const router = express.Router();
 router.use(protect, authorize('student'));
@@ -175,6 +176,9 @@ router.post('/me/events', async (req, res, next) => {
         const { eventId } = req.body;
         if (!eventId) {
             return res.status(400).json({ success: false, message: 'eventId is required' });
+        }
+        if (!isObjectIdString(eventId)) {
+            return res.status(400).json({ success: false, message: 'Invalid id' });
         }
 
         const event = await Event.findById(eventId);   // title/date come from the stored event, not the client

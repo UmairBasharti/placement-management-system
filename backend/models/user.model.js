@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { PASSWORD_MIN, PASSWORD_MAX } = require('../config/constants');
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -19,7 +20,8 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: [true, 'Password is required'],
-        minlength: 6,
+        minlength: PASSWORD_MIN,
+        maxlength: PASSWORD_MAX,
         select: false   // never returned in queries by default
     },
     role: {

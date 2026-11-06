@@ -2,15 +2,20 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const User = require('../models/user.model');
 const Student = require('../models/student.model');
 const { protect } = require('../middleware/auth.middleware');
 const validate = require('../middleware/validate');
-const { BRANCHES } = require('../config/constants');
+const { BRANCHES, PASSWORD_MIN, PASSWORD_MAX } = require('../config/constants');
+
+// Hash compared against when the e-mail is unknown (see the login route)
+const UNKNOWN_USER_HASH = bcrypt.hashSync('not-a-real-password', 10);
 
 // Helper — sign JWT
 function signToken(userId) {
     return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+        algorithm: 'HS256',
         expiresIn: process.env.JWT_EXPIRE || '24h'
     });
 }
@@ -19,7 +24,8 @@ function signToken(userId) {
 router.post('/register', [
     body('name').trim().notEmpty().withMessage('Name is required'),
     body('email').trim().toLowerCase().isEmail().withMessage('Valid email is required'),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    body('password').isString().isLength({ min: PASSWORD_MIN, max: PASSWORD_MAX })
+        .withMessage(`Password must be ${PASSWORD_MIN}-${PASSWORD_MAX} characters`),
     body('branch').isIn(BRANCHES).withMessage(`Branch must be one of: ${BRANCHES.join(', ')}`),
     validate
 ], async (req, res, next) => {
@@ -61,7 +67,7 @@ router.post('/register', [
 // POST /api/auth/login
 router.post('/login', [
     body('email').trim().toLowerCase().isEmail().withMessage('Valid email is required'),
-    body('password').notEmpty().withMessage('Password is required'),
+    body('password').isString().notEmpty().withMessage('Password is required'),
     validate
 ], async (req, res, next) => {
     try {
@@ -70,7 +76,9 @@ router.post('/login', [
 
         // select('+password') because password has select:false on schema
         const user = await User.findOne({ email }).select('+password');
-        if (!user || !(await user.matchPassword(password))) {
+        // An unknown e-mail still pays for one bcrypt comparison, so the response time does not reveal which e-mails exist
+        const passwordOk = user ? await user.matchPassword(password) : (await bcrypt.compare(password, UNKNOWN_USER_HASH), false);
+        if (!passwordOk) {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
 

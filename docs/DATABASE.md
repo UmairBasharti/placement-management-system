@@ -105,7 +105,7 @@ erDiagram
 |---|---|---|
 | `name` | String | required, trimmed |
 | `email` | String | required, **unique**, stored in lower case, format checked |
-| `password` | String | required, at least 6 characters, **bcrypt hash** (never stored in plain text), `select: false` so queries do not return it |
+| `password` | String | required, 8 to 72 characters, **bcrypt hash** (never stored in plain text), `select: false` so queries do not return it |
 | `role` | String | `student` (default) or `admin` |
 | `branch` | String | required for students: `MCA` or `MBA` (the list is in `config/constants.js`) |
 | `createdAt`, `updatedAt` | Date | automatic |

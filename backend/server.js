@@ -45,6 +45,16 @@ app.use(helmet({
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }
 }));
 
+// Browser features the pages never use are switched off; API responses (personal data) are never cached
+app.use((req, res, next) => {
+    res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+    next();
+});
+app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+});
+
 // The frontend is served by this same server, so cross-origin API access is OFF unless
 // CLIENT_ORIGIN (comma-separated list) is set — e.g. when hosting the frontend elsewhere.
 app.use(cors({

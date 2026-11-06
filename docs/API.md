@@ -34,7 +34,9 @@ Authorization: Bearer <token>
 
 **Rate limits, per IP address.** General API: 600 requests per 15 minutes. Login: 10 *failed* attempts per 15 minutes (successful logins are not counted). Registration: 20 per hour. Responses carry the standard `RateLimit-*` headers.
 
-**Ids.** MongoDB ObjectIds (24 hex characters). An invalid id returns `400 { "message": "Invalid id" }`.
+**Ids.** MongoDB ObjectIds (24 hex characters). An invalid id, or an id in a request body that is not a plain string, returns `400 { "message": "Invalid id" }`.
+
+**Caching.** Responses under `/api` are sent with `Cache-Control: no-store`, except the two public endpoints below, which set their own.
 
 **Access.** *Public* needs no login. *Any user* needs a valid token. *Student* and *Admin* need that role.
 
@@ -46,13 +48,13 @@ Authorization: Bearer <token>
 |---|---|---|
 | Public | `GET /health` | `{ "status": "ok", "database": "connected", "uptime": 123 }`. HTTP 503 with `"degraded"` while the database is unreachable. |
 | Public | `GET /public/stats` | `{ "data": { "students": 8, "companies": 6, "placed": 1 } }`. Counts only, cached for 60 seconds. Used by the home page. |
-| Public | `GET /public/meta` | `{ "data": { "branches": ["MCA","MBA"], "jobTypes": ["Full Time","Part Time","Internship"] } }`. Option lists for every form, cached for 5 minutes. |
+| Public | `GET /public/meta` | `{ "data": { "branches": ["MCA","MBA"], "jobTypes": ["Full Time","Part Time","Internship"], "passwordMin": 8, "passwordMax": 72 } }`. Option lists and limits for the forms, cached for 5 minutes. |
 
 ## Auth
 
 | Access | Endpoint | Description |
 |---|---|---|
-| Public | `POST /auth/register` | Body `{ name, email, password, branch }`. Password at least 6 characters; `branch` must be one of the courses from `/public/meta`. Always creates a student. Returns `201`; the user then logs in. |
+| Public | `POST /auth/register` | Body `{ name, email, password, branch }`. Password 8 to 72 characters (a string); `branch` must be one of the courses from `/public/meta`. Always creates a student. Returns `201`; the user then logs in. |
 | Public | `POST /auth/login` | Body `{ email, password }`. Returns `{ token, user: { id, name, email, role } }`. The token lasts `JWT_EXPIRE` (24 h by default). |
 | Any user | `GET /auth/me` | The current user: `{ id, name, email, role, branch }`. |
 
