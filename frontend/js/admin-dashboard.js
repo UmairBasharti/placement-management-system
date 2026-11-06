@@ -1,598 +1,575 @@
-// ═══════════════════════════════════════════════════════════════
-//  ADMIN DASHBOARD — all data from REST API, JWT-authenticated
-//  Fixes applied: #1 #5 #10 #12 #13 #14
-// ═══════════════════════════════════════════════════════════════
+// Admin dashboard: statistics, companies and applications, students, resume review, events.
+// Depends on utils.js and dashboard.js (apiFetch, requireRole, showNotification, initNavigation …).
 
-// Relative URL: works on any host/port
-const API = '/api';
+const user = requireRole('admin');
 
-async function apiFetch(endpoint, options = {}) {
-    const token = localStorage.getItem('token');
-    if (!token) { logout(); throw new Error(SESSION_EXPIRED); }
-    const isFormData = options.body instanceof FormData;
-    const headers = {
-        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-        Authorization: `Bearer ${token}`,
-        ...options.headers
-    };
-    const res = await fetch(API + endpoint, { ...options, headers });
-    // Throw (not return undefined) so callers never crash on `res.data` while the redirect happens
-    if (res.status === 401) { logout(); throw new Error(SESSION_EXPIRED); }
-    let data;
-    try { data = await res.json(); } catch (e) { throw new Error('Server returned an unexpected response'); }
-    if (!res.ok) throw new Error(data.message || 'Request failed');
-    return data;
-}
+const state = {
+    stats: null,
+    activities: [],
+    companies: [],
+    applications: [],
+    students: [],
+    resumes: [],
+    events: [],
+    editingCompanyId: null,
+    editingEventId: null
+};
 
-function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('currentUser');
-    window.location.href = 'index.html'; // back to the home page
-}
-
-function showNotification(message, type = 'success') {
-    const div = document.createElement('div');
-    div.className = `alert alert-${type === 'error' ? 'danger' : type} position-fixed top-0 end-0 m-3`;
-    div.style.zIndex = '9999';
-    div.textContent = message;
-    document.body.appendChild(div);
-    setTimeout(() => div.remove(), 3000);
-}
-
-// ── auth guard ────────────────────────────────────────────────
-let currentUser = null;
-try { currentUser = JSON.parse(localStorage.getItem('currentUser')); } catch { /* corrupt storage = logged out */ }
-const authorized = !!currentUser && currentUser.role === 'admin';
-if (!authorized) logout();
-
-// ── in-memory state ───────────────────────────────────────────
-let allStudents    = [];
-let allCompanies   = [];
-let allApplications = [];
-let allEvents      = [];
+const $ = (id) => document.getElementById(id);
+const detailsModal = new bootstrap.Modal($('detailsModal'));
 let placementChart = null;
-let courseChart    = null;
+let courseChart = null;
 
-// ── navigation ────────────────────────────────────────────────
-document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', async function (e) {
-        e.preventDefault();
-        if (this.id === 'logout') { logout(); return; }
+const PLACEMENT_STATUSES = ['Unplaced', 'Under Review', 'Interview Scheduled', 'Placed'];
+const STATUS_COLORS = ['#dc3545', '#ffd93d', '#bd0745', '#16a34a'];   // matches the status badges
+const ACTIVITY_ICON = { upload: 'file-arrow-up', status: 'chart-line', event: 'calendar-days', application: 'paper-plane', company: 'building' };
+const APPLICATION_ICON = { Accepted: 'circle-check', Rejected: 'circle-xmark', Pending: 'clock' };
+const RESUME_BADGE = { approved: ['bg-success', 'Approved'], rejected: ['bg-danger', 'Rejected'], pending: ['bg-warning text-dark', 'Pending'] };
 
-        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-        this.classList.add('active');
-
-        const section = this.dataset.section;
-        document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
-        const target = document.getElementById(`${section}-section`);
-        if (target) {
-            target.style.display = 'block';
-            document.getElementById('section-title').textContent = this.textContent.trim();
-        }
-
-        if      (section === 'dashboard') { await guarded(loadDashboard); }
-        else if (section === 'students')  { await guarded(loadStudents); }
-        else if (section === 'resumes')   { await guarded(loadResumes); }
-        else if (section === 'calendar')  { await guarded(loadCalendar); }
-        else if (section === 'companies') { await guarded(loadCompanies); }
-    });
-});
-
-// mobile sidebar (button + overlay live in the HTML; logic is shared in utils.js)
-initSidebar();
-
-// ── dashboard ─────────────────────────────────────────────────
-async function loadDashboard() {
-    const [statsRes, activitiesRes] = await Promise.all([
-        apiFetch('/admin/stats'),
-        apiFetch('/admin/activities')
-    ]);
-
-    const stats = statsRes.data;
-
-    const statusMap = {};
-    (stats.statusBreakdown || []).forEach(s => { statusMap[s._id] = s.count; });
-    const branchMap = {};
-    (stats.branchBreakdown || []).forEach(b => { branchMap[b._id] = b.count; });
-
-    updateCharts(statusMap, branchMap);
-    updateActivities(activitiesRes.data);
+// ── Small view helpers ───────────────────────────────────────────────────────
+function emptyState(text) {
+    return `<div class="empty-state">${esc(text)}</div>`;
 }
 
-function updateCharts(statusMap, branchMap) {
-    const placementCtx = document.getElementById('placementChart');
-    const courseCtx    = document.getElementById('courseChart');
-    if (!placementCtx || !courseCtx) return;
+function applicationStatusLabel(status) {
+    return `<span class="status-${statusSlug(status)} fw-semibold"><i class="fas fa-${APPLICATION_ICON[status] || 'clock'}" aria-hidden="true"></i> ${esc(status)}</span>`;
+}
 
-    if (placementChart) { placementChart.destroy(); }
-    if (courseChart)    { courseChart.destroy();    }
+function resumeBadge(resume) {
+    if (!resume || !resume.fileId) return '<span class="badge bg-secondary">No resume</span>';
+    const [tone, label] = RESUME_BADGE[resume.status] || RESUME_BADGE.pending;
+    return `<span class="badge ${tone}">Resume: ${label}</span>`;
+}
 
-    const statusLabels = ['Unplaced', 'Under Review', 'Interview Scheduled', 'Placed'];
-    placementChart = new Chart(placementCtx.getContext('2d'), {
+const skillChips = (skills, kind = '') => skills.map((s) => `<span class="skill-chip ${kind}">${esc(s)}</span>`).join('');
+
+function matchBadge(score) {
+    const level = score >= 70 ? '' : score >= 40 ? ' is-medium' : ' is-low';
+    return `<span class="match-badge${level}">${score}% match</span>`;
+}
+
+const companyMeta = (c) => `
+    <div class="company-meta">
+        <span><i class="fas fa-location-dot" aria-hidden="true"></i>${esc(c.location)}</span>
+        <span><i class="fas fa-briefcase" aria-hidden="true"></i>${esc(c.jobType)}</span>
+        <span><i class="fas fa-indian-rupee-sign" aria-hidden="true"></i>${esc(c.package || 'Not disclosed')}</span>
+    </div>`;
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
+function renderDashboard() {
+    const s = state.stats;
+    $('kpi-students').textContent = s.totalStudents;
+    $('kpi-placed').textContent = s.placedStudents;
+    $('kpi-companies').textContent = s.totalCompanies;
+    $('kpi-applications').textContent = s.totalApplications;
+
+    const byStatus = Object.fromEntries(s.statusBreakdown.map((x) => [x._id, x.count]));
+    const byBranch = Object.fromEntries(s.branchBreakdown.map((x) => [x._id || 'Unknown', x.count]));
+
+    placementChart?.destroy();
+    courseChart?.destroy();
+    placementChart = new Chart($('placementChart'), {
         type: 'doughnut',
         data: {
-            labels: statusLabels,
-            datasets: [{
-                data: statusLabels.map(l => statusMap[l] || 0),
-                backgroundColor: ['#fee2e2','#fef3c7','#dbeafe','#dcfce7'],
-                borderColor:     ['#dc2626','#d97706','#2563eb','#16a34a'],
-                borderWidth: 2
-            }]
+            labels: PLACEMENT_STATUSES,
+            datasets: [{ data: PLACEMENT_STATUSES.map((l) => byStatus[l] || 0), backgroundColor: STATUS_COLORS, borderWidth: 2, borderColor: '#fff' }]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
-
-    const branchLabels = Object.keys(branchMap).length ? Object.keys(branchMap) : ['MCA','MBA'];
-    courseChart = new Chart(courseCtx.getContext('2d'), {
+    courseChart = new Chart($('courseChart'), {
         type: 'bar',
         data: {
-            labels: branchLabels,
-            datasets: [{
-                label: 'Students',
-                data: branchLabels.map(l => branchMap[l] || 0),
-                backgroundColor: ['rgba(99,102,241,0.2)','rgba(79,70,229,0.2)'],
-                borderColor:     ['rgba(99,102,241,1)','rgba(79,70,229,1)'],
-                borderWidth: 2
-            }]
+            labels: Object.keys(byBranch),
+            datasets: [{ label: 'Students', data: Object.values(byBranch), backgroundColor: 'rgba(189, 7, 69, 0.8)', borderRadius: 6 }]
         },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
     });
-}
 
-// Icon per activity type
-function updateActivities(activities) {
-    const el = document.getElementById('recent-activities');
-    if (!el) return;
-    const iconMap = {
-        upload: 'file-upload',
-        status: 'chart-line',
-        event: 'calendar',
-        application: 'paper-plane'
-    };
-    el.innerHTML = activities.length ? activities.slice(0, 5).map(a => `
-        <div class="activity-item">
-            <div class="d-flex align-items-center">
-                <div class="activity-icon ${a.type}">
-                    <i class="fas fa-${iconMap[a.type] || 'info-circle'}"></i>
-                </div>
+    $('recent-activities').innerHTML = state.activities.length
+        ? state.activities.map((a) => `
+            <div class="activity-item">
+                <div class="activity-icon ${esc(a.type)}"><i class="fas fa-${ACTIVITY_ICON[a.type] || 'circle-info'}" aria-hidden="true"></i></div>
                 <div>
-                    <h6 class="mb-1">${esc(a.title)}</h6>
-                    <p class="mb-0 text-muted"><small>${new Date(a.timestamp).toLocaleString()}</small></p>
+                    <div>${esc(a.title)}</div>
+                    <small class="text-muted">${formatDateTime(a.timestamp)}</small>
                 </div>
+            </div>`).join('')
+        : emptyState('No activity yet.');
+}
+
+// ── Companies ────────────────────────────────────────────────────────────────
+function renderCompanies() {
+    const query = $('search-company').value.trim().toLowerCase();
+    const type = $('filter-job-type').value;
+    const branch = $('filter-branch').value;
+    const sort = $('sort-companies').value;
+
+    const order = {
+        'newest': (a, b) => new Date(b.postedDate) - new Date(a.postedDate),
+        'oldest': (a, b) => new Date(a.postedDate) - new Date(b.postedDate),
+        'name-asc': (a, b) => a.name.localeCompare(b.name),
+        'name-desc': (a, b) => b.name.localeCompare(a.name)
+    }[sort];
+
+    const list = state.companies
+        .filter((c) => (!query || c.name.toLowerCase().includes(query) || c.location.toLowerCase().includes(query))
+            && (!type || c.jobType === type) && (!branch || c.branches.includes(branch)))
+        .sort(order);
+
+    $('companies-list').innerHTML = list.length ? list.map((c) => `
+        <article class="company-card">
+            <h3>${esc(c.name)}</h3>
+            ${companyMeta(c)}
+            <p class="mb-0">${esc(c.description)}</p>
+            <div class="company-tags">
+                <span class="company-tag">Open to: ${esc(c.branches.join(', '))}</span>
+                ${c.requirements ? `<span class="company-tag">${esc(c.requirements)}</span>` : ''}
             </div>
-        </div>`).join('') : '<div class="text-center text-muted">No recent activities</div>';
+            <div class="company-actions">
+                <button type="button" class="action-btn view-btn" data-action="company-view" data-id="${esc(c._id)}"><i class="fas fa-eye me-1" aria-hidden="true"></i>Details</button>
+                <button type="button" class="action-btn edit-btn" data-action="company-edit" data-id="${esc(c._id)}"><i class="fas fa-pen me-1" aria-hidden="true"></i>Edit</button>
+                <button type="button" class="action-btn delete-btn" data-action="company-remove" data-id="${esc(c._id)}"><i class="fas fa-trash me-1" aria-hidden="true"></i>Remove</button>
+            </div>
+        </article>`).join('') : emptyState('No companies yet. Use "Add company" to create the first one.');
 }
 
-// ── students ──────────────────────────────────────────────────
-async function loadStudents() {
-    const res = await apiFetch('/admin/students');
-    allStudents = res.data;
-    updateStudentsList();
-}
+function renderApplications() {
+    const filter = $('application-filter').value;
+    const list = state.applications.filter((a) => !filter || a.status === filter);
 
-function updateStudentsList() {
-    const search     = (document.getElementById('search-students')?.value || '').toLowerCase();
-    const courseFilter = document.getElementById('filter-course')?.value || '';
-    const statusFilter = document.getElementById('filter-status')?.value || '';
-
-    const filtered = allStudents.filter(s => {
-        const matchSearch  = s.name.toLowerCase().includes(search) || s.email.toLowerCase().includes(search);
-        const matchCourse  = !courseFilter || s.course === courseFilter;
-        const matchStatus  = !statusFilter || s.status === statusFilter;
-        return matchSearch && matchCourse && matchStatus;
-    });
-
-    const el = document.getElementById('students-list');
-    if (!el) return;
-    el.innerHTML = filtered.map(s => `
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card student-card">
-                <div class="card-body">
-                    <h5 class="card-title">${esc(s.name)}</h5>
-                    <p class="card-text">
-                        <small class="text-muted">${esc(s.email)}</small><br>
-                        <span class="badge bg-secondary">${esc(s.course || 'N/A')}</span>
-                        <span class="status-badge status-${(s.status||'').toLowerCase().replace(/ /g,'-')}">
-                            <i class="fas fa-circle"></i> ${s.status}
-                        </span>
-                    </p>
-                    <div class="d-flex gap-2">
-                        <select class="form-select form-select-sm" onchange="updateStudentStatus('${s.id}', this.value)">
-                            ${['Unplaced','Under Review','Interview Scheduled','Placed'].map(v =>
-                                `<option value="${v}" ${s.status === v ? 'selected' : ''}>${v}</option>`
-                            ).join('')}
-                        </select>
-                    </div>
+    $('applications-list').innerHTML = list.length ? list.map((a) => `
+        <div class="application-card">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                <div>
+                    <h3>${esc(a.studentName)}</h3>
+                    <div class="text-muted small">${esc(a.studentEmail)}</div>
+                    <div class="mt-2"><strong>${esc(a.company ? a.company.name : 'Removed company')}</strong> · applied ${formatDateTime(a.appliedDate)}</div>
                 </div>
+                ${applicationStatusLabel(a.status)}
             </div>
-        </div>`).join('');
+            ${a.status === 'Pending' ? `
+                <div class="company-actions">
+                    <button type="button" class="action-btn approve-btn" data-action="application-decide" data-id="${esc(a._id)}" data-status="Accepted"><i class="fas fa-check me-1" aria-hidden="true"></i>Accept</button>
+                    <button type="button" class="action-btn reject-btn" data-action="application-decide" data-id="${esc(a._id)}" data-status="Rejected"><i class="fas fa-xmark me-1" aria-hidden="true"></i>Reject</button>
+                </div>` : ''}
+        </div>`).join('') : emptyState(filter ? `No ${filter.toLowerCase()} applications.` : 'No applications yet.');
 }
 
-window.updateStudentStatus = async function (studentId, status) {
+async function decideApplication(id, status) {
     try {
-        await apiFetch(`/admin/students/${studentId}/status`, {
-            method: 'PUT',
-            body: JSON.stringify({ status })
-        });
-        await loadStudents();
-        showNotification('Student status updated');
+        await apiFetch(`/applications/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
+        showNotification(`Application ${status.toLowerCase()}`);
+        await loaders.companies();
     } catch (err) {
         showNotification(err.message, 'error');
     }
-};
+}
 
-document.getElementById('search-students')?.addEventListener('input', updateStudentsList);
-document.getElementById('filter-course')?.addEventListener('change', updateStudentsList);
-document.getElementById('filter-status')?.addEventListener('change', updateStudentsList);
+function openCompanyForm(company = null) {
+    state.editingCompanyId = company ? company._id : null;
+    $('company-form-title').textContent = company ? 'Edit company' : 'Add company';
+    $('company-save').textContent = company ? 'Save changes' : 'Add company';
 
-// ── export CSV ────────────────────────────────────────────────
-document.getElementById('export-data')?.addEventListener('click', async function () {
-    if (!allStudents.length) await loadStudents();
-    const csv = [
-        ['Name','Email','Course','Status','Skills','Education','Projects'],
-        ...allStudents.map(s => [s.name, s.email, s.course, s.status, s.skills, s.education, s.projects])
-    ].map(row => row.map(v => `"${(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    $('company-form').reset();
+    if (company) {
+        $('company-name').value = company.name;
+        $('company-location').value = company.location;
+        $('company-job-type').value = company.jobType;
+        $('company-description').value = company.description;
+        $('company-requirements').value = company.requirements || '';
+        $('company-skills').value = (company.requiredSkills || []).join(', ');
+        $('company-package').value = company.package || '';
+    }
+    document.querySelectorAll('#company-branches input').forEach((box) => {
+        box.checked = Boolean(company) && company.branches.includes(box.value);
+    });
 
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'students_data.csv';
-    a.click();
+    $('company-form-card').hidden = false;
+    $('company-form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('company-name').focus({ preventScroll: true });
+}
+
+function closeCompanyForm() {
+    $('company-form-card').hidden = true;
+    state.editingCompanyId = null;
+}
+
+$('company-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const branches = [...document.querySelectorAll('#company-branches input:checked')].map((box) => box.value);
+    if (!branches.length) return showNotification('Select at least one branch', 'error');
+
+    const editing = state.editingCompanyId;
+    $('company-save').disabled = true;
+    try {
+        await apiFetch(editing ? `/companies/${editing}` : '/companies', {
+            method: editing ? 'PUT' : 'POST',
+            body: JSON.stringify({
+                name: $('company-name').value,
+                location: $('company-location').value,
+                jobType: $('company-job-type').value,
+                description: $('company-description').value,
+                requirements: $('company-requirements').value,
+                requiredSkills: $('company-skills').value,
+                package: $('company-package').value,
+                branches
+            })
+        });
+        showNotification(editing ? 'Company updated' : 'Company added');
+        closeCompanyForm();
+        await loaders.companies();
+    } catch (err) {
+        showNotification(err.message, 'error');
+    } finally {
+        $('company-save').disabled = false;
+    }
 });
 
-// ── resumes ───────────
-async function loadResumes() {
-    const res = await apiFetch('/admin/resumes');
-    const el = document.getElementById('resumes-list');
-    if (!el) return;
-    el.innerHTML = res.data.map(s => `
+async function removeCompany(id) {
+    const company = state.companies.find((c) => c._id === id);
+    if (!company || !confirm(`Remove ${company.name}?\n\nStudents will no longer see it. Applications already made are kept.`)) return;
+    try {
+        await apiFetch(`/companies/${id}`, { method: 'DELETE' });
+        showNotification('Company removed');
+        await loaders.companies();
+    } catch (err) {
+        showNotification(err.message, 'error');
+    }
+}
+
+async function openCompanyDetails(id) {
+    const base = state.companies.find((c) => c._id === id);
+    if (!base) return;
+    $('detailsModalTitle').textContent = base.name;
+    $('detailsModalBody').innerHTML = '<p class="text-muted mb-0">Loading…</p>';
+    detailsModal.show();
+
+    try {
+        const [detail, matches] = await Promise.all([apiFetch(`/companies/${id}`), apiFetch(`/admin/companies/${id}/matches`)]);
+        const c = detail.data;
+        const skills = c.requiredSkills || [];
+        $('detailsModalBody').innerHTML = `
+            <div class="detail-grid">
+                <div class="detail-item"><span class="label">Job type</span><span class="value">${esc(c.jobType)}</span></div>
+                <div class="detail-item"><span class="label">Package</span><span class="value">${esc(c.package || 'Not disclosed')}</span></div>
+                <div class="detail-item"><span class="label">Location</span><span class="value">${esc(c.location)}</span></div>
+                <div class="detail-item"><span class="label">Open to</span><span class="value">${esc(c.branches.join(', '))}</span></div>
+                <div class="detail-item"><span class="label">Posted</span><span class="value">${formatDate(c.postedDate)}</span></div>
+                <div class="detail-item"><span class="label">Requirements</span><span class="value">${esc(c.requirements || 'Not specified')}</span></div>
+            </div>
+            <div class="stat-tiles">
+                <div class="stat-tile"><div class="number">${c.stats.total}</div><div class="label">Applications</div></div>
+                <div class="stat-tile"><div class="number">${c.stats.pending}</div><div class="label">Pending</div></div>
+                <div class="stat-tile"><div class="number">${c.stats.accepted}</div><div class="label">Accepted</div></div>
+                <div class="stat-tile"><div class="number">${c.stats.rejected}</div><div class="label">Rejected</div></div>
+            </div>
+            <h3 class="fs-6">Required skills</h3>
+            <div class="skill-row mb-3">${skills.length ? skillChips(skills) : '<span class="text-muted small">None listed — they are read from the requirements text.</span>'}</div>
+
+            <h3 class="fs-6">Best-matching students</h3>
+            ${matches.data.length ? matches.data.map((m) => `
+                <div class="match-row">
+                    <div>
+                        <strong>${esc(m.name)}</strong> <span class="text-muted small">${esc(m.course)} · ${esc(m.status)}</span>
+                        <div class="skill-row">${skillChips(m.matchedSkills, 'matched')}</div>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2">${resumeBadge({ fileId: m.resumeStatus !== 'none', status: m.resumeStatus })}${matchBadge(m.matchScore)}</div>
+                </div>`).join('') : '<p class="text-muted small">No student with a matching skill yet.</p>'}
+
+            <h3 class="fs-6 mt-4">Internal notes <span class="text-muted fw-normal small">(students never see these)</span></h3>
+            <div id="notes-list">${(c.notes || []).length
+                ? c.notes.map((n) => `<div class="note-item">${esc(n.text)}<div class="text-muted small">${formatDateTime(n.date)}</div></div>`).join('')
+                : '<p class="text-muted small">No notes yet.</p>'}</div>
+            <div class="mt-2">
+                <label class="visually-hidden" for="note-text">New note</label>
+                <textarea class="form-control mb-2" id="note-text" rows="2" maxlength="500" placeholder="Add a note for the placement team"></textarea>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-action="note-add" data-id="${esc(c._id)}">Add note</button>
+            </div>`;
+    } catch (err) {
+        $('detailsModalBody').innerHTML = `<div class="alert alert-danger mb-0">${esc(err.message)}</div>`;
+    }
+}
+
+async function addNote(id) {
+    const text = $('note-text').value.trim();
+    if (!text) return showNotification('Write a note first', 'error');
+    try {
+        await apiFetch(`/companies/${id}/notes`, { method: 'POST', body: JSON.stringify({ text }) });
+        showNotification('Note added');
+        await openCompanyDetails(id);
+    } catch (err) {
+        showNotification(err.message, 'error');
+    }
+}
+
+// ── Students ─────────────────────────────────────────────────────────────────
+function renderStudents() {
+    const query = $('search-students').value.trim().toLowerCase();
+    const course = $('filter-course').value;
+    const status = $('filter-status').value;
+
+    const list = state.students.filter((s) =>
+        (!query || s.name.toLowerCase().includes(query) || s.email.toLowerCase().includes(query))
+        && (!course || s.course === course) && (!status || s.status === status));
+
+    $('students-list').innerHTML = list.length ? list.map((s) => `
+        <div class="col-md-6 col-xl-4 mb-3">
+            <div class="card student-card h-100 mb-0"><div class="card-body">
+                <div>
+                    <h3>${esc(s.name)}</h3>
+                    <div class="text-muted small">${esc(s.email)}</div>
+                </div>
+                <div class="badges">
+                    <span class="badge bg-secondary">${esc(s.course || 'N/A')}</span>
+                    <span class="status-badge status-${statusSlug(s.status)}">${esc(s.status)}</span>
+                    ${resumeBadge(s.resume)}
+                </div>
+                <div class="mt-auto d-flex gap-2 pt-2">
+                    <label class="visually-hidden" for="status-${esc(s.id)}">Placement status of ${esc(s.name)}</label>
+                    <select class="form-select form-select-sm student-status-select" id="status-${esc(s.id)}" data-id="${esc(s.id)}">
+                        ${PLACEMENT_STATUSES.map((v) => `<option${s.status === v ? ' selected' : ''}>${v}</option>`).join('')}
+                    </select>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-action="student-view" data-id="${esc(s.id)}">Profile</button>
+                </div>
+            </div></div>
+        </div>`).join('') : `<div class="col-12">${emptyState('No students match these filters.')}</div>`;
+}
+
+async function updateStudentStatus(select) {
+    try {
+        await apiFetch(`/admin/students/${select.dataset.id}/status`, { method: 'PUT', body: JSON.stringify({ status: select.value }) });
+        showNotification('Placement status updated');
+        await loaders.students();
+    } catch (err) {
+        showNotification(err.message, 'error');
+        await loaders.students();   // put the dropdown back to the stored value
+    }
+}
+
+function openStudentDetails(id) {
+    const s = state.students.find((x) => x.id === id);
+    if (!s) return;
+    const history = [...(s.statusHistory || [])].reverse();
+    const field = (text) => text ? `<p class="mb-0" style="white-space: pre-line;">${esc(text)}</p>` : '<p class="text-muted mb-0">Not filled in</p>';
+
+    $('detailsModalTitle').textContent = s.name;
+    $('detailsModalBody').innerHTML = `
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <span class="badge bg-secondary">${esc(s.course || 'N/A')}</span>
+            <span class="status-badge status-${statusSlug(s.status)}">${esc(s.status)}</span>
+            ${resumeBadge(s.resume)}
+        </div>
+        <p class="text-muted">${esc(s.email)}</p>
+        <h3 class="fs-6">Skills</h3>
+        <div class="skill-row mb-3">${(s.skills || '').trim() ? skillChips(s.skills.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean)) : '<span class="text-muted small">Not filled in</span>'}</div>
+        <h3 class="fs-6">Education</h3><div class="mb-3">${field(s.education)}</div>
+        <h3 class="fs-6">Projects</h3><div class="mb-3">${field(s.projects)}</div>
+        ${s.resume && s.resume.fileId ? `<button type="button" class="btn btn-outline-primary btn-sm mb-3" data-action="resume-view" data-id="${esc(s.id)}"><i class="fas fa-eye me-1" aria-hidden="true"></i>Open resume (${esc(s.resume.name)})</button>` : ''}
+        <h3 class="fs-6">Placement history</h3>
+        ${history.length ? history.map((h) => `<div class="note-item"><strong>${esc(h.status)}</strong> — ${esc(h.message || '')}<div class="text-muted small">${formatDateTime(h.timestamp)}</div></div>`).join('') : '<p class="text-muted small mb-0">No changes yet.</p>'}`;
+    detailsModal.show();
+}
+
+// A cell that starts with = + - @ would be run as a formula by Excel, so it gets a leading apostrophe
+const csvCell = (value) => {
+    let text = String(value ?? '');
+    if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+    return `"${text.replace(/"/g, '""')}"`;
+};
+
+async function exportStudents() {
+    try {
+        if (!state.students.length) await loaders.students();
+        const rows = [
+            ['Name', 'Email', 'Course', 'Placement status', 'Resume status', 'Skills', 'Education', 'Projects'],
+            ...state.students.map((s) => [s.name, s.email, s.course, s.status, s.resume && s.resume.fileId ? s.resume.status : 'none', s.skills, s.education, s.projects])
+        ];
+        const csv = '﻿' + rows.map((row) => row.map(csvCell).join(',')).join('\r\n');   // BOM: Excel reads UTF-8 correctly
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        link.download = 'students.csv';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    } catch (err) {
+        showNotification(err.message, 'error');
+    }
+}
+
+// ── Resumes ──────────────────────────────────────────────────────────────────
+function renderResumes() {
+    $('resumes-list').innerHTML = state.resumes.length ? state.resumes.map((s) => {
+        const [tone, label] = RESUME_BADGE[s.resume.status] || RESUME_BADGE.pending;
+        return `
         <tr>
             <td>${esc(s.name)}</td>
             <td>${esc(s.course || 'N/A')}</td>
             <td>${esc(s.resume.name)}</td>
-            <td><span class="badge ${{ approved: 'bg-success', rejected: 'bg-danger' }[s.resume.status] || 'bg-warning'}">${{ approved: 'Approved', rejected: 'Rejected' }[s.resume.status] || 'Pending'}</span></td>
+            <td><span class="badge ${tone}">${label}</span></td>
             <td>
-                <div class="btn-group">
-                    <button type="button" class="btn btn-sm btn-primary" data-resume-id="${esc(s.id)}" aria-label="View resume">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn btn-sm btn-success" onclick="approveResume('${s.id}')" ${s.resume.status === 'approved' ? 'disabled' : ''} aria-label="Approve resume">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="rejectResume('${s.id}')">
-                        <i class="fas fa-times"></i>
-                    </button>
+                <div class="row-actions">
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-action="resume-view" data-id="${esc(s.id)}" aria-label="View resume of ${esc(s.name)}"><i class="fas fa-eye" aria-hidden="true"></i></button>
+                    <button type="button" class="btn btn-sm btn-success" data-action="resume-approve" data-id="${esc(s.id)}" aria-label="Approve resume of ${esc(s.name)}"${s.resume.status === 'approved' ? ' disabled' : ''}><i class="fas fa-check" aria-hidden="true"></i></button>
+                    <button type="button" class="btn btn-sm btn-danger" data-action="resume-reject" data-id="${esc(s.id)}" aria-label="Reject resume of ${esc(s.name)}"${s.resume.status === 'rejected' ? ' disabled' : ''}><i class="fas fa-xmark" aria-hidden="true"></i></button>
                 </div>
             </td>
-        </tr>`).join('');
+        </tr>`;
+    }).join('') : `<tr><td colspan="5">${emptyState('No resumes uploaded yet.')}</td></tr>`;
 }
 
-// "View resume" — fetched with the admin token (files are not publicly accessible)
-document.getElementById('resumes-list')?.addEventListener('click', async (e) => {
-    const btn = e.target.closest('button[data-resume-id]');
-    if (!btn) return;
+async function reviewResume(id, decision) {
+    if (decision === 'reject' && !confirm('Reject this resume? The student will be asked to upload a new one.')) return;
     try {
-        await openProtectedPdf(`/admin/students/${btn.dataset.resumeId}/resume`);
+        await apiFetch(`/admin/resumes/${id}/${decision}`, { method: 'PUT' });
+        showNotification(decision === 'approve' ? 'Resume approved' : 'Resume rejected');
+        await loaders.resumes();
     } catch (err) {
         showNotification(err.message, 'error');
     }
-});
-
-window.approveResume = async function (studentId) {
-    try {
-        await apiFetch(`/admin/resumes/${studentId}/approve`, { method: 'PUT' });
-        await loadResumes();
-        showNotification('Resume approved');
-    } catch (err) { showNotification(err.message, 'error'); }
-};
-
-window.rejectResume = async function (studentId) {
-    try {
-        await apiFetch(`/admin/resumes/${studentId}/reject`, { method: 'PUT' });
-        await loadResumes();
-        showNotification('Resume rejected');
-    } catch (err) { showNotification(err.message, 'error'); }
-};
-
-// ── companies ─────────────────────────────────────────────────
-async function loadCompanies() {
-    const [compRes, appRes] = await Promise.all([
-        apiFetch('/companies'),
-        apiFetch('/admin/applications')
-    ]);
-    allCompanies    = compRes.data;
-    allApplications = appRes.data;
-    displayCompanies();
-    displayApplications();
 }
 
-function displayCompanies() {
-    const el = document.getElementById('companies-list');
-    if (!el) return;
-    const search   = (document.getElementById('search-company')?.value || '').toLowerCase();
-    const jobType  = document.getElementById('filter-job-type')?.value || '';
-    const branch   = document.getElementById('filter-branch')?.value  || '';
-    const sortBy   = document.getElementById('sort-companies')?.value || 'newest';
+// ── Calendar ─────────────────────────────────────────────────────────────────
+// "now" in the format datetime-local expects (local time, minutes)
+const localNow = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
-    let filtered = allCompanies.filter(c => {
-        const matchSearch  = c.name.toLowerCase().includes(search) || c.location.toLowerCase().includes(search);
-        const matchJobType = !jobType || c.jobType === jobType;
-        const matchBranch  = !branch  || c.branches.includes(branch);
-        return matchSearch && matchJobType && matchBranch;
-    });
-
-    filtered.sort((a, b) => {
-        if (sortBy === 'newest')    return new Date(b.postedDate) - new Date(a.postedDate);
-        if (sortBy === 'oldest')    return new Date(a.postedDate) - new Date(b.postedDate);
-        if (sortBy === 'name-asc')  return a.name.localeCompare(b.name);
-        if (sortBy === 'name-desc') return b.name.localeCompare(a.name);
-        return 0;
-    });
-
-    el.innerHTML = filtered.map(c => `
-        <div class="company-card">
-            <div class="d-flex align-items-start">
-                <div class="company-info ms-3">
-                    <h3>${esc(c.name)}</h3>
-                    <p><i class="fas fa-map-marker-alt"></i> ${esc(c.location)}</p>
-                    <p><i class="fas fa-briefcase"></i> ${esc(c.jobType)}</p>
-                    <p><i class="fas fa-rupee-sign"></i> ${esc(c.package || 'N/A')}</p>
+function renderCalendar() {
+    const events = [...state.events].sort((a, b) => new Date(a.date) - new Date(b.date));
+    $('calendar').innerHTML = events.length ? events.map((ev) => {
+        const upcoming = new Date(ev.date) > new Date();
+        return `
+        <div class="calendar-event ${upcoming ? 'upcoming' : 'past'}">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div>
+                    <h3 class="h6 mb-1">${esc(ev.title)}</h3>
+                    <small class="text-muted"><i class="fas fa-clock me-1" aria-hidden="true"></i>${formatDateTime(ev.date)}</small>
+                    ${ev.description ? `<p class="mt-2 mb-0">${esc(ev.description)}</p>` : ''}
+                    ${upcoming ? '' : '<span class="badge bg-secondary mt-2">Past event</span>'}
                 </div>
-            </div>
-            <p class="mt-2">${esc(c.description)}</p>
-            <div class="company-tags">
-                <span class="company-tag">${esc(c.branches.join(', '))}</span>
-                ${c.requirements ? `<span class="company-tag">${esc(c.requirements)}</span>` : ''}
-            </div>
-            <div class="company-actions">
-                <button class="action-btn view-btn" onclick="viewCompanyDetails('${c._id}')">
-                    <i class="fas fa-eye"></i> View Details
-                </button>
-                <button class="action-btn edit-btn" onclick="editCompany('${c._id}')">
-                    <i class="fas fa-edit"></i> Edit
-                </button>
-                <button class="action-btn delete-btn" onclick="deleteCompany('${c._id}')">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
-            </div>
-        </div>`).join('');
-}
-
-window.viewCompanyDetails = function (companyId) {
-    const company = allCompanies.find(c => c._id === companyId);
-    if (!company) return;
-    const compApps  = allApplications.filter(a => a.company && a.company._id === companyId);
-    const modal = document.createElement('div');
-    modal.className = 'modal fade';
-    modal.innerHTML = `
-        <div class="modal-dialog company-details-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">${esc(company.name)}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="company-details-grid">
-                        <div class="detail-item"><label>Job Type</label><div class="value">${esc(company.jobType)}</div></div>
-                        <div class="detail-item"><label>Package</label><div class="value">${esc(company.package || 'N/A')}</div></div>
-                        <div class="detail-item"><label>Branches</label><div class="value">${esc(company.branches.join(', '))}</div></div>
-                        <div class="detail-item"><label>Requirements</label><div class="value">${esc(company.requirements || 'N/A')}</div></div>
-                        <div class="detail-item"><label>Posted Date</label><div class="value">${new Date(company.postedDate).toLocaleDateString()}</div></div>
-                    </div>
-                    <div class="company-stats mt-3">
-                        <div class="stat-card"><div class="number">${compApps.length}</div><div class="label">Total Applications</div></div>
-                        <div class="stat-card"><div class="number">${compApps.filter(a=>a.status==='Accepted').length}</div><div class="label">Accepted</div></div>
-                        <div class="stat-card"><div class="number">${compApps.filter(a=>a.status==='Pending').length}</div><div class="label">Pending</div></div>
-                    </div>
+                <div class="event-actions">
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-action="event-edit" data-id="${esc(ev._id)}" aria-label="Edit ${esc(ev.title)}"><i class="fas fa-pen" aria-hidden="true"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-action="event-delete" data-id="${esc(ev._id)}" aria-label="Delete ${esc(ev.title)}"><i class="fas fa-trash" aria-hidden="true"></i></button>
                 </div>
             </div>
         </div>`;
-    document.body.appendChild(modal);
-    const m = new bootstrap.Modal(modal);
-    m.show();
-    modal.addEventListener('hidden.bs.modal', () => modal.remove());
-};
-
-window.editCompany = function (companyId) {
-    const c = allCompanies.find(c => c._id === companyId);
-    if (!c) return;
-    document.getElementById('company-name').value         = c.name;
-    document.getElementById('company-description').value  = c.description;
-    document.getElementById('company-location').value     = c.location;
-    document.getElementById('company-job-type').value     = c.jobType;
-    document.getElementById('company-requirements').value = c.requirements || '';
-    document.getElementById('company-package').value      = c.package || '';
-    document.getElementById('branch-mca').checked = c.branches.includes('MCA');
-    document.getElementById('branch-mba').checked = c.branches.includes('MBA');
-    document.getElementById('add-company-form').style.display = 'block';
-    document.getElementById('company-form').dataset.editId = companyId;
-    document.querySelector('#company-form button[type="submit"]').textContent = 'Update Company';
-};
-
-window.deleteCompany = async function (companyId) {
-    if (!confirm('Delete this company and all its applications?')) return;
-    try {
-        await apiFetch(`/companies/${companyId}`, { method: 'DELETE' });
-        await loadCompanies();
-        showNotification('Company deleted successfully');
-    } catch (err) { showNotification(err.message, 'error'); }
-};
-
-window.showAddCompanyForm = function () {
-    document.getElementById('add-company-form').style.display = 'block';
-    document.getElementById('company-form').reset();
-    delete document.getElementById('company-form').dataset.editId;
-    document.querySelector('#company-form button[type="submit"]').textContent = 'Add Company';
-};
-
-document.getElementById('company-form')?.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    const branches = [];
-    if (document.getElementById('branch-mca').checked) branches.push('MCA');
-    if (document.getElementById('branch-mba').checked) branches.push('MBA');
-
-    const payload = {
-        name:        document.getElementById('company-name').value,
-        description: document.getElementById('company-description').value,
-        location:    document.getElementById('company-location').value,
-        jobType:     document.getElementById('company-job-type').value,
-        requirements:document.getElementById('company-requirements').value,
-        package:     document.getElementById('company-package').value,
-        branches
-    };
-
-    try {
-        if (this.dataset.editId) {
-            await apiFetch(`/companies/${this.dataset.editId}`, {
-                method: 'PUT', body: JSON.stringify(payload)
-            });
-            showNotification('Company updated successfully');
-        } else {
-            await apiFetch('/companies', {
-                method: 'POST', body: JSON.stringify(payload)
-            });
-            showNotification('Company added successfully');
-        }
-        document.getElementById('add-company-form').style.display = 'none';
-        this.reset();
-        delete this.dataset.editId;
-        await loadCompanies();
-    } catch (err) { showNotification(err.message, 'error'); }
-});
-
-// applications
-function displayApplications() {
-    const el = document.getElementById('applications-list');
-    if (!el) return;
-    el.innerHTML = allApplications.length ? allApplications.map(app => `
-        <div class="application-card">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <h4>${esc(app.studentName)}</h4>
-                    <p class="text-muted">${esc(app.studentEmail)}</p>
-                    <p><strong>Company:</strong> ${esc(app.company ? app.company.name : 'N/A')}</p>
-                    <p><strong>Applied on:</strong> ${new Date(app.appliedDate).toLocaleString()}</p>
-                </div>
-                <div class="application-status">
-                    <i class="fas fa-${app.status === 'Accepted' ? 'check-circle' : app.status === 'Rejected' ? 'times-circle' : 'clock'}"></i>
-                    <span>${app.status}</span>
-                </div>
-            </div>
-            ${app.status === 'Pending' ? `
-                <div class="action-buttons">
-                    <button class="action-btn approve-btn" onclick="updateApplicationStatus('${app._id}','Accepted')">
-                        <i class="fas fa-check"></i> Accept
-                    </button>
-                    <button class="action-btn reject-btn" onclick="updateApplicationStatus('${app._id}','Rejected')">
-                        <i class="fas fa-times"></i> Reject
-                    </button>
-                </div>` : ''}
-        </div>`).join('') : '<div class="alert alert-secondary">No applications found</div>';
+    }).join('') : emptyState('No events yet. Add one with the form.');
 }
 
-window.updateApplicationStatus = async function (appId, status) {
+function setEventForm(event = null) {
+    state.editingEventId = event ? event._id : null;
+    $('event-form-title').textContent = event ? 'Edit event' : 'Add event';
+    $('event-save').textContent = event ? 'Save changes' : 'Add event';
+    $('event-cancel').hidden = !event;
+    $('event-title').value = event ? event.title : '';
+    $('event-date').value = event ? event.date.slice(0, 16) : '';
+    $('event-description').value = event ? event.description || '' : '';
+    if (event) $('event-date').removeAttribute('min'); else $('event-date').min = localNow();   // past dates only when editing
+}
+
+$('event-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const editing = state.editingEventId;
+    $('event-save').disabled = true;
     try {
-        await apiFetch(`/applications/${appId}/status`, {
-            method: 'PUT',
-            body: JSON.stringify({ status })
+        await apiFetch(editing ? `/events/${editing}` : '/events', {
+            method: editing ? 'PUT' : 'POST',
+            body: JSON.stringify({ title: $('event-title').value, date: $('event-date').value, description: $('event-description').value })
         });
-        await loadCompanies();
-        showNotification(`Application ${status.toLowerCase()}`);
-    } catch (err) { showNotification(err.message, 'error'); }
-};
-
-// company filter/sort listeners
-document.getElementById('search-company')?.addEventListener('input', displayCompanies);
-document.getElementById('filter-job-type')?.addEventListener('change', displayCompanies);
-document.getElementById('filter-branch')?.addEventListener('change', displayCompanies);
-document.getElementById('sort-companies')?.addEventListener('change', displayCompanies);
-
-// ── events / calendar ─────────────────────────────────────────
-async function loadCalendar() {
-    const res = await apiFetch('/events');
-    allEvents = res.data;
-    updateCalendar();
-}
-
-function updateCalendar() {
-    const el = document.getElementById('calendar');
-    if (!el) return;
-    const sorted = [...allEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
-    el.innerHTML = sorted.length ? sorted.map((ev, i) => {
-        const isUpcoming = new Date(ev.date) > new Date();
-        return `
-            <div class="calendar-event ${isUpcoming ? 'upcoming' : 'past'}">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="mb-1">${esc(ev.title)}</h6>
-                        <p class="mb-0 text-muted"><small><i class="fas fa-clock me-2"></i>${new Date(ev.date).toLocaleString()}</small></p>
-                        ${ev.description ? `<p class="mt-2">${esc(ev.description)}</p>` : ''}
-                        ${!isUpcoming ? '<div class="mt-2"><span class="badge bg-secondary">Past Event</span></div>' : ''}
-                    </div>
-                    <div class="btn-group">
-                        <button class="btn btn-sm btn-primary" onclick="editEvent('${ev._id}')"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteEvent('${ev._id}')"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>
-            </div>`;
-    }).join('') : '<div class="alert alert-secondary">No events scheduled</div>';
-}
-
-window.editEvent = function (eventId) {
-    const ev = allEvents.find(e => e._id === eventId);
-    if (!ev) return;
-    document.getElementById('event-title').value       = ev.title;
-    document.getElementById('event-date').value        = ev.date;
-    document.getElementById('event-description').value = ev.description || '';
-    document.getElementById('event-form').dataset.editId = eventId;
-    document.querySelector('#event-form button[type="submit"]').textContent = 'Update Event';
-};
-
-window.deleteEvent = async function (eventId) {
-    if (!confirm('Delete this event?')) return;
-    try {
-        await apiFetch(`/events/${eventId}`, { method: 'DELETE' });
-        await loadCalendar();
-        showNotification('Event deleted');
-    } catch (err) { showNotification(err.message, 'error'); }
-};
-
-document.getElementById('event-form')?.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    const payload = {
-        title:       document.getElementById('event-title').value,
-        date:        document.getElementById('event-date').value,
-        description: document.getElementById('event-description').value
-    };
-    try {
-        if (this.dataset.editId) {
-            await apiFetch(`/events/${this.dataset.editId}`, {
-                method: 'PUT', body: JSON.stringify(payload)
-            });
-            delete this.dataset.editId;
-            this.querySelector('button[type="submit"]').textContent = 'Add Event';
-            showNotification('Event updated');
-        } else {
-            await apiFetch('/events', { method: 'POST', body: JSON.stringify(payload) });
-            showNotification('Event created');
-        }
-        this.reset();
-        await loadCalendar();
-    } catch (err) { showNotification(err.message, 'error'); }
+        showNotification(editing ? 'Event updated — students were notified' : 'Event created — students were notified');
+        setEventForm();
+        await loaders.calendar();
+    } catch (err) {
+        showNotification(err.message, 'error');
+    } finally {
+        $('event-save').disabled = false;
+    }
 });
 
-// ── init ──────────────────────────────────────────────────────
-async function init() {
+async function deleteEvent(id) {
+    const ev = state.events.find((x) => x._id === id);
+    if (!ev || !confirm(`Delete "${ev.title}"? It is removed from students' calendars too.`)) return;
     try {
-        await loadDashboard();
-        document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
-        const dash = document.getElementById('dashboard-section');
-        if (dash) dash.style.display = 'block';
-        document.getElementById('section-title').textContent = 'Dashboard';
+        await apiFetch(`/events/${id}`, { method: 'DELETE' });
+        showNotification('Event deleted');
+        if (state.editingEventId === id) setEventForm();
+        await loaders.calendar();
     } catch (err) {
-        console.error('Init error:', err);
-        showLoadError('We could not load the dashboard. Please check your connection and try again.');
+        showNotification(err.message, 'error');
     }
 }
 
-if (authorized) withLoading(init);
+// ── Section loaders ──────────────────────────────────────────────────────────
+const loaders = {
+    async dashboard() {
+        const [stats, activities] = await Promise.all([apiFetch('/admin/stats'), apiFetch('/admin/activities')]);
+        state.stats = stats.data;
+        state.activities = activities.data;
+        renderDashboard();
+    },
+    async companies() {
+        const [companies, applications] = await Promise.all([apiFetch('/companies'), apiFetch('/admin/applications')]);
+        state.companies = companies.data;
+        state.applications = applications.data;
+        renderCompanies();
+        renderApplications();
+    },
+    async students() {
+        state.students = (await apiFetch('/admin/students')).data;
+        renderStudents();
+    },
+    async resumes() {
+        state.resumes = (await apiFetch('/admin/resumes')).data;
+        renderResumes();
+    },
+    async calendar() {
+        state.events = (await apiFetch('/events')).data;
+        renderCalendar();
+    }
+};
+
+// ── Events ───────────────────────────────────────────────────────────────────
+const actions = {
+    'company-new': () => openCompanyForm(),
+    'company-cancel': () => closeCompanyForm(),
+    'company-view': (el) => openCompanyDetails(el.dataset.id),
+    'company-edit': (el) => openCompanyForm(state.companies.find((c) => c._id === el.dataset.id)),
+    'company-remove': (el) => removeCompany(el.dataset.id),
+    'note-add': (el) => addNote(el.dataset.id),
+    'application-decide': (el) => decideApplication(el.dataset.id, el.dataset.status),
+    'student-view': (el) => openStudentDetails(el.dataset.id),
+    'export-students': () => exportStudents(),
+    'resume-view': (el) => openProtectedPdf(`/admin/students/${el.dataset.id}/resume`).catch((err) => showNotification(err.message, 'error')),
+    'resume-approve': (el) => reviewResume(el.dataset.id, 'approve'),
+    'resume-reject': (el) => reviewResume(el.dataset.id, 'reject'),
+    'event-edit': (el) => { setEventForm(state.events.find((x) => x._id === el.dataset.id)); $('event-title').focus(); },
+    'event-delete': (el) => deleteEvent(el.dataset.id),
+    'event-cancel': () => setEventForm()
+};
+
+document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-action]');
+    if (el && actions[el.dataset.action]) actions[el.dataset.action](el);
+});
+
+document.addEventListener('change', (e) => {
+    if (e.target.matches('.student-status-select')) updateStudentStatus(e.target);
+});
+
+[['search-company', renderCompanies], ['filter-job-type', renderCompanies], ['filter-branch', renderCompanies], ['sort-companies', renderCompanies],
+ ['application-filter', renderApplications],
+ ['search-students', renderStudents], ['filter-course', renderStudents], ['filter-status', renderStudents]
+].forEach(([id, render]) => $(id).addEventListener(id.startsWith('search') ? 'input' : 'change', render));
+
+// ── Start ────────────────────────────────────────────────────────────────────
+if (user) {
+    initSidebar();
+    setEventForm();
+    withLoading(async () => {
+        await fillOptionLists().catch(() => {});
+        const ok = await initNavigation(loaders);
+        if (!ok) showLoadError('We could not load the dashboard. Please check your connection and try again.');
+    });
+}

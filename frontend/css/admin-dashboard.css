@@ -1,792 +1,197 @@
-/* Admin Dashboard (page-specific overrides — common.css provides base) */
+/* Admin dashboard only. Shared dashboard styles live in dashboard.css. */
 
-:root {
-    --sidebar-width: 280px;
-}
-
-body {
-    background-color: var(--light-bg);
-}
-
-/* ── Sidebar ─────────────────────────────────────────────────── */
-
-.sidebar {
-    background: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    color: white;
-    top: 0;
-    bottom: 0;
-    overflow-y: auto;
-    z-index: 1000;
-    width: var(--sidebar-width);
-    position: fixed;
-    left: 0;
-    padding: 2rem;
-    transition: all 0.3s ease;
-}
-
-.nav-link {
-    color: rgba(255,255,255,0.8);
-    margin: 5px 0;
-    padding: 12px 20px;
-    border-radius: 8px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-}
-
-.nav-link::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.1);
-    transform: scaleX(0);
-    transform-origin: right;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: -1;
-}
-
-.nav-link:hover, .nav-link.active {
-    color: white;
-    transform: translateX(5px);
-}
-
-.nav-link:hover::before, .nav-link.active::before {
-    transform: scaleX(1);
-    transform-origin: left;
-}
-
-.nav-link i {
-    margin-right: 10px;
-    transition: transform 0.3s ease;
-}
-
-.nav-link:hover i, .nav-link.active i {
-    transform: scale(1.2);
-}
-
-/* ── Main Content ────────────────────────────────────────────── */
-
-/* Sidebar is fixed; the content fills the rest of the row (no width:100% + margin overflow) */
-.app-layout {
+/* Headline numbers */
+.kpi {
     display: flex;
-    min-height: 100vh;
-}
-
-/* Mobile top bar — only shown at <= 992px */
-.topbar {
-    display: none;
-}
-
-.main-content {
-    flex: 1 1 0;
-    min-width: 0;
-    margin-left: var(--sidebar-width);
-    padding: 2rem;
-    padding-bottom: 2rem;
-    transition: all 0.3s ease;
-}
-
-/* Long unbroken names/URLs wrap instead of pushing the layout wider. Bootstrap gives headings
-   overflow-wrap:break-word, which does not let flex items shrink — `anywhere` does.
-   Tables are excluded on purpose (they scroll sideways inside .table-responsive). */
-.main-content :is(h1, h2, h3, h4, h5, h6, p, small, span, div, label, li) {
-    overflow-wrap: anywhere;
-}
-
-/* ── Cards ────────────────────────────────────────────────────── */
-
-.card {
-    background: white;
-    border: none;
+    align-items: center;
+    gap: 1rem;
+    height: 100%;
+    padding: 1rem 1.25rem;
     border-radius: 12px;
+    background: #fff;
     box-shadow: var(--card-shadow);
-    margin-bottom: 1.5rem;
-    transition: all 0.3s ease;
 }
 
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+.kpi > i {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    color: var(--primary-color);
+    background: rgba(var(--primary-rgb), 0.1);
 }
 
-/* ── Charts ──────────────────────────────────────────────────── */
+.kpi-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
 
-.chart-container {
+.kpi-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.chart-box {
     position: relative;
-    height: 300px;
-    margin-bottom: 1.5rem;
+    height: 280px;
 }
 
-/* Status badges — base styles are in common.css */
-
-/* ── Student Cards ───────────────────────────────────────────── */
-
-.student-card {
-    transition: all 0.3s ease;
+/* Activity feed */
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #edf0f3;
 }
 
-.student-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+.activity-item:last-child {
+    border-bottom: none;
 }
 
-/* ── Search ──────────────────────────────────────────────────── */
-
-.search-box {
-    position: relative;
+.activity-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: #475569;
+    background: #e2e8f0;
 }
 
-.search-box i {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6c757d;
+.activity-icon.upload { color: #2563eb; background: #dbeafe; }
+.activity-icon.status { color: #d97706; background: #fef3c7; }
+.activity-icon.event { color: #16a34a; background: #dcfce7; }
+.activity-icon.application { color: #7c3aed; background: #ede9fe; }
+.activity-icon.company { color: var(--primary-color); background: #fde7ee; }
+
+/* Filter / action bar above lists */
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding: 1rem;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: var(--card-shadow);
 }
 
-.search-box input {
-    padding-left: 2.5rem;
-    border-radius: 8px;
-    border: 2px solid #e2e8f0;
-    transition: all 0.3s ease;
+.toolbar > .form-select {
+    flex: 0 1 180px;
 }
 
-.search-box input:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+.toolbar-search {
+    flex: 1 1 220px;
 }
 
-/* ── Forms ────────────────────────────────────────────────────── */
-
-.form-control {
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-    border: 2px solid #e2e8f0;
-    transition: all 0.3s ease;
+/* Student cards */
+.student-card .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
-.form-control:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
+.student-card h3 {
+    margin: 0;
+    font-size: 1.1rem;
     font-weight: 600;
-    transition: all 0.3s ease;
 }
 
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.5);
+.student-card .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
 }
 
-/* ── Tables ──────────────────────────────────────────────────── */
-
-.table {
-    margin-bottom: 0;
-    border-collapse: separate;
-    border-spacing: 0;
-}
-
+/* Tables */
 .table th {
-    border-top: none;
     font-weight: 600;
+    white-space: nowrap;
     color: var(--text-color);
     background-color: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
 }
 
 .table td {
     vertical-align: middle;
 }
 
-.table tr:hover {
-    background-color: rgba(0, 0, 0, 0.02);
-}
-
-/* ── Activities ──────────────────────────────────────────────── */
-
-.activity-item {
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    background: white;
-    box-shadow: var(--card-shadow);
-    transition: all 0.3s ease;
-}
-
-.activity-item:hover {
-    transform: translateX(5px);
-}
-
-.activity-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
+.row-actions {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 1rem;
+    gap: 0.35rem;
 }
 
-.activity-icon.upload {
-    background-color: #dbeafe;
-    color: #2563eb;
-}
-
-.activity-icon.status {
-    background-color: #fef3c7;
-    color: #d97706;
-}
-
-.activity-icon.event {
-    background-color: #dcfce7;
-    color: #16a34a;
-}
-
-.activity-icon.application {
-    background-color: #ede9fe;
-    color: #7c3aed;
-}
-
-/* ── Calendar Events ─────────────────────────────────────────── */
-
-.calendar-event {
-    background: white;
-    padding: 1rem;
-    border-radius: 8px;
+/* Applications */
+.application-card {
     margin-bottom: 1rem;
-    box-shadow: var(--card-shadow);
-    transition: all 0.3s ease;
-}
-
-.calendar-event:hover {
-    transform: translateX(5px);
-}
-
-.calendar-event.upcoming {
-    border-left: 4px solid var(--primary-color);
-}
-
-.calendar-event.past {
-    opacity: 0.7;
-    border-left: 4px solid #6c757d;
-}
-
-.btn-group {
-    display: flex;
-    gap: 0.5rem;
-}
-
-/* ── Companies ───────────────────────────────────────────────── */
-
-.company-card {
-    background: white;
+    padding: 1rem 1.25rem;
     border-radius: 10px;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-    border: 1px solid #e0e0e0;
+    background: #fff;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
 }
 
-.company-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+.application-card h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
 }
 
-.company-info h3 {
-    color: var(--primary-color);
-    margin-bottom: 0.5rem;
-}
-
-.company-info p {
-    color: #666;
-    margin-bottom: 0.5rem;
-}
-
-.company-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+/* Company details dialog */
+.stat-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.75rem;
     margin: 1rem 0;
 }
 
-.company-tag {
-    background: #f0f2f5;
-    color: #666;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-}
-
-/* ── Company Actions ─────────────────────────────────────────── */
-
-.company-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 1rem;
-}
-
-.action-btn {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    margin: 0 5px;
-}
-
-.action-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-.approve-btn {
-    background: #4caf50;
-    color: white;
-}
-
-.reject-btn {
-    background: #f44336;
-    color: white;
-}
-
-.edit-btn {
-    background: #2196f3;
-    color: white;
-}
-
-.view-btn {
-    background: #9c27b0;
-    color: white;
-}
-
-/* Delete button (red) */
-.delete-btn {
-    background: #f44336;
-    color: white;
-}
-
-/* ── Application Cards ───────────────────────────────────────── */
-
-.application-card {
-    background: white;
-    border-radius: 10px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.application-status {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    padding: 0.5rem;
-    border-radius: 5px;
-    background: #f8f9fa;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 1rem;
-}
-
-/* ── Add Company Form ────────────────────────────────────────── */
-
-.add-company-form {
-    background: white;
-    padding: 2rem;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: var(--text-color);
-    font-weight: 500;
-}
-
-.submit-btn {
-    background: var(--primary-color);
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.submit-btn:hover {
-    background: var(--secondary-color);
-    transform: translateY(-2px);
-}
-
-/* ── Filters ─────────────────────────────────────────────────── */
-
-.company-filters {
-    background: white;
-    padding: 1rem;
-    border-radius: 10px;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.filter-group {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.filter-group select, .filter-group input {
-    flex: 1;
-}
-
-/* ── Company Details Modal ───────────────────────────────────── */
-
-.company-details-modal {
-    max-width: 800px;
-}
-
-.company-details-modal .modal-body {
-    padding: 2rem;
-}
-
-.company-details-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-}
-
-.detail-item {
-    margin-bottom: 1rem;
-}
-
-.detail-item label {
-    display: block;
-    color: #666;
-    margin-bottom: 0.25rem;
-}
-
-.detail-item .value {
-    font-weight: 500;
-    color: var(--text-color);
-}
-
-.company-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-    margin-top: 1.5rem;
-}
-
-.stat-card {
-    background: #f8f9fa;
-    padding: 1rem;
+.stat-tile {
+    padding: 0.75rem;
     border-radius: 8px;
     text-align: center;
+    background: #f8f9fa;
 }
 
-.stat-card .number {
-    font-size: 1.5rem;
+.stat-tile .number {
+    font-size: 1.4rem;
     font-weight: 600;
     color: var(--primary-color);
-    margin-bottom: 0.5rem;
 }
 
-.stat-card .label {
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.company-notes {
-    margin-top: 1.5rem;
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 8px;
-}
-
-.notes-list {
-    margin-top: 1rem;
+.stat-tile .label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
 }
 
 .note-item {
-    padding: 0.75rem;
-    background: white;
-    border-radius: 6px;
     margin-bottom: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.note-item .date {
-    font-size: 0.8rem;
-    color: #666;
-    margin-top: 0.25rem;
-}
-
-.add-note-form {
-    margin-top: 1rem;
-}
-
-.add-note-form textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #ddd;
+    padding: 0.6rem 0.75rem;
     border-radius: 6px;
-    margin-bottom: 0.5rem;
+    background: #f8f9fa;
 }
 
-.add-note-form button {
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
+.match-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #edf0f3;
 }
 
-/* Notifications — base styles are in common.css */
-
-/* Loading — base styles are in common.css */
-
-/* ── Export Button ────────────────────────────────────────────── */
-
-.export-btn {
-    position: relative;
-    overflow: hidden;
-}
-
-.export-btn::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 5px;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.5);
-    opacity: 0;
-    border-radius: 100%;
-    transform: scale(1, 1) translate(-50%);
-    transform-origin: 50% 50%;
-}
-
-.export-btn:focus:not(:active)::after {
-    animation: ripple 1s ease-out;
-}
-
-@keyframes ripple {
-    0% { transform: scale(0, 0); opacity: 0.5; }
-    100% { transform: scale(20, 20); opacity: 0; }
-}
-
-/* Footer — dashboard override (fixed + sidebar offset) */
-.footer {
-    margin-left: var(--sidebar-width);
-}
-
-/* ── Mobile Responsive ───────────────────────────────────────── */
-
-@media (max-width: 992px) {
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: -100%;
-        width: 80%;
-        max-width: 300px;
-        height: 100vh;
-        height: 100dvh;
-        z-index: 1000;
-        transition: all 0.3s ease;
-    }
-
-    .sidebar.active {
-        left: 0;
-    }
-
-    .main-content {
-        margin-left: 0;
-        padding: 1rem;
-        padding-bottom: 1.5rem;
-    }
-
-    .nav-link {
-        padding: 0.75rem 1rem;
-    }
-
-    .nav-link i {
-        font-size: 1.1rem;
-    }
-
-    .card {
-        margin-bottom: 1rem;
-    }
-
-    .chart-container {
-        height: 250px;
-    }
-
-    .student-card {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .student-info {
-        margin-bottom: 1rem;
-    }
-
-    .student-actions {
-        width: 100%;
-        justify-content: flex-start;
-        gap: 0.5rem;
-    }
-
-    .status-badge {
-        font-size: 0.7rem;
-        padding: 0.25rem 0.5rem;
-    }
-
-    .calendar-event {
-        padding: 0.75rem;
-    }
-
-    .btn-group {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .btn-group button {
-        width: 100%;
-    }
-
-    .topbar {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        position: sticky;
-        top: 0;
-        z-index: 900;
-        height: 56px;
-        padding: 0 1rem;
-        background: #fff;
-        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    .topbar-title {
-        font-weight: 700;
-        color: var(--primary-color);
-    }
-
-    .mobile-menu-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 40px;
-        height: 40px;
-        border: none;
-        border-radius: 50%;
-        background: var(--primary-color);
-        color: #fff;
-    }
-
-    .sidebar-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        z-index: 999;
-    }
-
-    .sidebar-overlay.active {
-        display: block;
-    }
-
-    .footer {
-        margin-left: 0;
-    }
+.match-row:last-child {
+    border-bottom: none;
 }
 
 @media (max-width: 576px) {
-    .main-content {
-        padding: 0.75rem;
-        padding-bottom: 1.5rem;
-    }
-
-    .form-control {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.9rem;
-    }
-
-    .btn {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.9rem;
-    }
-
-    .modal-dialog {
-        margin: 0.5rem;
-    }
-
-    .activity-item {
-        padding: 0.75rem;
-    }
-
-    .calendar-event {
-        padding: 0.5rem;
-    }
-
-    .search-box {
-        margin-bottom: 1rem;
-    }
-}
-
-@media (max-height: 600px) and (orientation: landscape) {
-    .sidebar {
-        overflow-y: auto;
-    }
-
-    .main-content {
-        padding: 0.75rem;
-        padding-bottom: 1.5rem;
-    }
-
-    .card {
-        margin-bottom: 0.75rem;
-    }
-
-    .chart-container {
-        height: 200px;
-    }
-}
-
-@media (max-width: 768px) {
-    .footer-content {
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .footer-links {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 1rem;
-    }
-
-    .footer-social {
-        justify-content: center;
+    .toolbar > .form-select,
+    .toolbar > .btn {
+        flex: 1 1 100%;
     }
 }
