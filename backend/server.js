@@ -30,12 +30,8 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
-            // Some buttons still use inline onclick="" handlers (they only carry server-generated ids).
-            // Remove this line once those are replaced by event listeners.
-            scriptSrcAttr: ["'unsafe-inline'"],
-            styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com',
-                       'https://unpkg.com', 'https://fonts.googleapis.com'],
-            fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://unpkg.com', 'https://fonts.gstatic.com', 'data:'],
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com', 'https://fonts.googleapis.com'],
+            fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://fonts.gstatic.com', 'data:'],
             imgSrc: ["'self'", 'data:', 'blob:'],
             connectSrc: ["'self'"],
             objectSrc: ["'none'"],
@@ -58,8 +54,8 @@ app.use(cors({
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
-// NOTE: uploads/ is deliberately NOT served statically — resumes are personal data and are
-// only available through the authenticated /resume routes (student own file, admin any).
+// Resumes are personal data: they live in GridFS and are only available through the authenticated
+// /resume routes (a student's own file, or any file for an admin), never as a public URL.
 
 // Frontend static files (index.html is served for "/")
 app.use(express.static(FRONTEND_DIR));
