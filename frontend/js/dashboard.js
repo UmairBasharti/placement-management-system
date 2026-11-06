@@ -119,5 +119,11 @@
         });
     }
 
+    // The login is stored per browser, not per tab. If another tab signs in or out, reload this one so it
+    // can never keep acting as the previous user (requireRole sends it away if the role no longer fits).
+    global.addEventListener('storage', (e) => {
+        if (e.key === 'token' || e.key === 'currentUser') global.location.reload();
+    });
+
     Object.assign(global, { logout, requireRole, apiFetch, showNotification, initNavigation, loadMeta, fillOptionLists });
 })(window);
