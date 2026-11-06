@@ -24,7 +24,7 @@ if (process.env.TRUST_PROXY) {
     app.set('trust proxy', Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY);
 }
 
-// ── Security headers ──────────────────────────────────────────────────────────
+// Security headers
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -64,7 +64,7 @@ app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 // Frontend static files (index.html is served for "/")
 app.use(express.static(FRONTEND_DIR));
 
-// ── Rate limiting (in-memory; fine for a single instance) ─────────────────────
+// Rate limiting (in-memory; fine for a single instance)
 const limiter = (windowMs, limit, message, extra = {}) => rateLimit({
     windowMs, limit, standardHeaders: 'draft-7', legacyHeaders: false,
     message: { success: false, message }, ...extra
@@ -74,7 +74,7 @@ app.use('/api', limiter(15 * 60 * 1000, 600, 'Too many requests. Please slow dow
 app.use('/api/auth/login', limiter(15 * 60 * 1000, 10, 'Too many failed login attempts. Try again in 15 minutes.', { skipSuccessfulRequests: true }));
 app.use('/api/auth/register', limiter(60 * 60 * 1000, 20, 'Too many registrations from this address. Try again later.'));
 
-// ── Routes ────────────────────────────────────────────────────────────────────
+// Routes
 app.get('/api/health', (req, res) => {
     const dbUp = mongoose.connection.readyState === 1;
     res.status(dbUp ? 200 : 503).json({ status: dbUp ? 'ok' : 'degraded', database: dbUp ? 'connected' : 'disconnected', uptime: Math.round(process.uptime()) });
@@ -104,20 +104,20 @@ app.use((req, res) => {
 // Central error handler (maps known errors to clean responses; never leaks internals)
 app.use(require('./middleware/error.middleware'));
 
-// ── Startup: connect to the database FIRST, exit if it fails ──────────────────
+// Startup: connect to the database FIRST, exit if it fails
 async function start() {
     try {
         await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 15000 });
-        console.log('✅ Connected to MongoDB');
+        console.log('Connected to MongoDB');
     } catch (err) {
-        console.error('❌ MongoDB connection failed:', err.message);
+        console.error('MongoDB connection failed:', err.message);
         console.error('   Check MONGODB_URI, your Atlas IP access list and — on some networks — DNS_SERVERS in backend/.env');
         process.exit(1);
     }
 
     const PORT = process.env.PORT || 5000;
     const server = app.listen(PORT, () => {
-        console.log(`🚀 Server running on http://localhost:${PORT}`);
+        console.log(`Server running on http://localhost:${PORT}`);
     });
 
     // Graceful shutdown: stop accepting requests, close the DB, then exit

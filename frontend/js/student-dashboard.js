@@ -20,7 +20,7 @@ const scanModal = new bootstrap.Modal($('scanModal'));
 const PROGRESS = { 'Unplaced': 0, 'Under Review': 50, 'Interview Scheduled': 75, 'Placed': 100 };
 const APPLICATION_ICON = { Accepted: 'circle-check', Rejected: 'circle-xmark', Pending: 'clock' };
 
-// ── Data ─────────────────────────────────────────────────────────────────────
+// Data
 async function fetchProfile() {
     state.profile = (await apiFetch('/students/me')).data;
     renderUnreadBadge();
@@ -48,7 +48,7 @@ async function fetchRecommendations() {
 
 const applicationFor = (companyId) => state.applications.find((a) => a.company && a.company._id === companyId);
 
-// ── Small view helpers ───────────────────────────────────────────────────────
+// Small view helpers
 function emptyState(text, shortcuts = []) {
     const buttons = shortcuts.map(([section, label]) =>
         `<button type="button" class="btn btn-sm btn-outline-primary me-2" data-goto="${section}">${esc(label)}</button>`).join('');
@@ -79,7 +79,7 @@ const companyMeta = (c) => `
 
 const splitSkills = (text) => String(text || '').split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
 
-// ── Dashboard ────────────────────────────────────────────────────────────────
+// Dashboard
 function profileChecks() {
     const p = state.profile;
     const resume = p.resume || {};
@@ -197,7 +197,7 @@ function renderUpcomingEvents() {
         : emptyState('No upcoming events.');
 }
 
-// ── Companies ────────────────────────────────────────────────────────────────
+// Companies
 function renderCompanies() {
     const query = $('search-company').value.trim().toLowerCase();
     const type = $('filter-job-type').value;
@@ -279,7 +279,7 @@ async function applyTo(companyId, button) {
     }
 }
 
-// ── Profile ──────────────────────────────────────────────────────────────────
+// Profile
 function renderProfile() {
     const p = state.profile;
     $('profile-name').value = p.name || '';
@@ -309,7 +309,7 @@ $('profile-form').addEventListener('submit', async (e) => {
     }
 });
 
-// ── Resume ───────────────────────────────────────────────────────────────────
+// Resume
 const RESUME_LOOK = {
     approved: ['alert-success', 'circle-check', 'approved — you can apply to companies'],
     pending: ['alert-warning', 'clock', 'waiting for approval by the placement cell'],
@@ -431,7 +431,7 @@ $('scan-apply').addEventListener('click', async () => {
     }
 });
 
-// ── Status timeline ──────────────────────────────────────────────────────────
+// Status timeline
 function renderStatusTimeline() {
     const history = [...(state.profile.statusHistory || [])].reverse();
     $('status-timeline').innerHTML = history.length
@@ -446,7 +446,7 @@ function renderStatusTimeline() {
         : emptyState('No status changes yet. Your history appears here once you apply to a company.');
 }
 
-// ── Calendar ─────────────────────────────────────────────────────────────────
+// Calendar
 function renderCalendar() {
     const mine = new Set((state.profile.events || []).map((e) => e.eventId));
     const events = [...state.events].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -499,7 +499,7 @@ function openEventDetails(id) {
     detailsModal.show();
 }
 
-// ── Notifications ────────────────────────────────────────────────────────────
+// Notifications
 function renderUnreadBadge() {
     const unread = (state.profile.notifications || []).filter((n) => !n.read).length;
     const badge = $('unread-badge');
@@ -518,7 +518,7 @@ function renderNotifications() {
         : emptyState('No notifications yet.');
 }
 
-// ── Section loaders ──────────────────────────────────────────────────────────
+// Section loaders
 const loaders = {
     async dashboard() {
         await Promise.all([fetchProfile(), fetchApplications(), fetchEvents(), fetchRecommendations()]);
@@ -555,7 +555,7 @@ const loaders = {
     }
 };
 
-// ── Events ───────────────────────────────────────────────────────────────────
+// Events
 const actions = {
     'apply': (el) => applyTo(el.dataset.id, el),
     'company-details': (el) => openCompanyDetails(el.dataset.id),
@@ -579,7 +579,7 @@ document.addEventListener('click', (e) => {
     $(id).addEventListener(id === 'search-company' ? 'input' : 'change', renderCompanies);
 });
 
-// ── Start ────────────────────────────────────────────────────────────────────
+// Start
 if (user) {
     initSidebar();
     withLoading(async () => {

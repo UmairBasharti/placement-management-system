@@ -31,7 +31,7 @@ async function extractPdfText(buffer) {
     }
 }
 
-// ── Section detection ────────────────────────────────────────────────────────
+// Section detection
 const HEADINGS = {
     skills: /^(technical |key |core |professional |it )?(skills?|skill set|competenc(y|ies)|technologies|tools( and technologies)?|areas of expertise)$/,
     education: /^(education|educational (qualifications?|background|details)|academic (qualifications?|background|details|profile)|qualifications?)$/,
@@ -71,7 +71,7 @@ function cleanBlock(lines, maxChars) {
 
 // Suggestions from the plain text of a resume
 function parseResume(text) {
-    const lines = String(text || '').replace(/\r/g, '\n').split('\n').map((l) => l.replace(/ /g, ' ').trim()).filter(Boolean);
+    const lines = String(text || '').replace(/\r/g, '\n').split('\n').map((l) => l.replace(/\u00a0/g, ' ').trim()).filter(Boolean);
     const sections = splitSections(lines);
 
     return {

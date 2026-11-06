@@ -88,7 +88,7 @@ router.post('/login', [
 });
 
 // GET /api/auth/me — verify token and return current user
-router.get('/me', protect, async (req, res, next) => {
+router.get('/me', protect, (req, res) => {
     res.json({
         success: true,
         user: {

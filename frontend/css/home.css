@@ -5,7 +5,7 @@ html {
     scroll-padding-top: 80px;   /* keep section titles clear of the fixed navbar */
 }
 
-/* ── Navbar ───────────────────────────────────────────────────────────────── */
+/* Navbar */
 .navbar {
     position: fixed;
     inset: 0 0 auto 0;
@@ -147,7 +147,7 @@ html {
 .nav-hamburger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
 .nav-hamburger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
 
-/* ── Hero ─────────────────────────────────────────────────────────────────── */
+/* Hero */
 .hero {
     display: flex;
     align-items: center;
@@ -254,7 +254,7 @@ html {
     color: var(--text-muted);
 }
 
-/* ── Sections ─────────────────────────────────────────────────────────────── */
+/* Sections */
 .section-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -406,7 +406,7 @@ html {
     text-underline-offset: 3px;
 }
 
-/* ── Tablet and phone: the menu becomes a slide-in panel ──────────────────── */
+/* Tablet and phone: the menu becomes a slide-in panel */
 @media (max-width: 992px) {
     .nav-container {
         padding: 0 1.25rem;

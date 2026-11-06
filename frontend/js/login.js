@@ -12,7 +12,7 @@ try {
     }
 } catch { /* unreadable storage: show the form */ }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers
 async function post(endpoint, body) {
     const res = await fetch(`/api${endpoint}`, {
         method: 'POST',
@@ -40,7 +40,7 @@ function setLoading(button, loading) {
     button.classList.toggle('is-loading', loading);
 }
 
-// ── Switching between the two forms ──────────────────────────────────────────
+// Switching between the two forms
 function showRegister(register) {
     container.classList.toggle('active', register);
     // The hidden form must not be reachable with Tab or a screen reader
@@ -60,7 +60,7 @@ if (adminMode) {
     $('login-box').style.cssText = 'position: relative; width: 100%;';
 }
 
-// ── Show / hide password ─────────────────────────────────────────────────────
+// Show / hide password
 document.querySelectorAll('.toggle-password').forEach((button) => {
     button.addEventListener('click', () => {
         const input = button.parentElement.querySelector('input');
@@ -72,7 +72,7 @@ document.querySelectorAll('.toggle-password').forEach((button) => {
     });
 });
 
-// ── Course list from the server (the HTML keeps a fallback) ──────────────────
+// Course list from the server (the HTML keeps a fallback)
 fetch('/api/public/meta')
     .then((res) => res.json())
     .then(({ data }) => {
@@ -83,7 +83,7 @@ fetch('/api/public/meta')
     })
     .catch(() => { /* the fallback options in the HTML stay */ });
 
-// ── Register ─────────────────────────────────────────────────────────────────
+// Register
 $('register-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = $('register-name').value.trim();
@@ -111,7 +111,7 @@ $('register-form')?.addEventListener('submit', async (e) => {
     }
 });
 
-// ── Log in ───────────────────────────────────────────────────────────────────
+// Log in
 $('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = $('login-email').value.trim();

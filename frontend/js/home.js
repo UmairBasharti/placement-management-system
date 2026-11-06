@@ -14,7 +14,7 @@ const hamburger = document.getElementById('nav-hamburger');
 const panel = document.getElementById('nav-panel');
 const navLinks = document.querySelectorAll('.nav-menu .nav-link');
 
-// ── Mobile menu ──────────────────────────────────────────────────────────────
+// Mobile menu
 function setMenu(open) {
     panel.classList.toggle('is-open', open);
     hamburger.setAttribute('aria-expanded', String(open));
@@ -29,7 +29,7 @@ document.addEventListener('click', (e) => {
 });
 window.matchMedia('(min-width: 993px)').addEventListener('change', (e) => { if (e.matches) setMenu(false); });
 
-// ── Active menu link while scrolling ─────────────────────────────────────────
+// Active menu link while scrolling
 const sections = [...document.querySelectorAll('main section[id]')];
 const linkFor = (id) => [...navLinks].find((l) => l.getAttribute('href') === `#${id}`);
 
@@ -42,7 +42,7 @@ const observer = new IntersectionObserver((entries) => {
 }, { rootMargin: '-45% 0px -50% 0px' });
 sections.forEach((section) => observer.observe(section));
 
-// ── Live statistics ──────────────────────────────────────────────────────────
+// Live statistics
 function countUp(el, target) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion || target === 0) { el.textContent = target; return; }

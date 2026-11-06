@@ -1,5 +1,4 @@
 const multer = require('multer');
-const path = require('path');
 const mongoose = require('mongoose');
 
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -37,9 +36,11 @@ function isPdfBuffer(buffer) {
     return Buffer.isBuffer(buffer) && buffer.subarray(0, 1024).includes('%PDF-');
 }
 
-// No path parts or control characters, bounded length
+// Keep only the file's own name: no folders (either slash style), reserved or control characters; bounded length
 function cleanFileName(name) {
-    const base = path.basename(String(name || '')).replace(/[\x00-\x1f\x7f<>:"/\\|?*]+/g, '_').trim().slice(0, 100);
+    const lastPart = String(name || '').split(/[\\/]/).pop();
+    const printable = [...lastPart].filter((ch) => ch.charCodeAt(0) > 31 && ch.charCodeAt(0) !== 127).join('');
+    const base = printable.replace(/[<>:"|?*]+/g, '_').trim().slice(0, 100);
     return base || 'resume.pdf';
 }
 

@@ -9,7 +9,7 @@ body {
     background-color: var(--light-bg);
 }
 
-/* ── Bootstrap re-themed to the college crimson ───────────────────────────── */
+/* Bootstrap re-themed to the college crimson */
 .btn-primary {
     --bs-btn-bg: var(--primary-color);
     --bs-btn-border-color: var(--primary-color);
@@ -67,7 +67,7 @@ body {
     font-size: 0.9rem;
 }
 
-/* ── Layout ───────────────────────────────────────────────────────────────── */
+/* Layout */
 .app-layout {
     display: flex;
     min-height: 100vh;
@@ -180,7 +180,7 @@ body {
     display: none;
 }
 
-/* ── Cards, tiles ─────────────────────────────────────────────────────────── */
+/* Cards, tiles */
 .card {
     margin-bottom: 1.5rem;
     border: none;
@@ -200,7 +200,7 @@ body {
     color: var(--text-muted);
 }
 
-/* ── Company cards (student list, admin list, recommendations) ────────────── */
+/* Company cards (student list, admin list, recommendations) */
 .company-card {
     margin-bottom: 1rem;
     padding: 1.25rem 1.5rem;
@@ -309,7 +309,7 @@ body {
 .skill-chip.matched { color: #166534; background: #dcfce7; }
 .skill-chip.missing { color: #6b7280; background: #f3f4f6; }
 
-/* ── Calendar events ──────────────────────────────────────────────────────── */
+/* Calendar events */
 .calendar-event {
     margin-bottom: 1rem;
     padding: 1rem;
@@ -329,7 +329,7 @@ body {
     gap: 0.5rem;
 }
 
-/* ── Detail modals ────────────────────────────────────────────────────────── */
+/* Detail modals */
 .detail-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -347,7 +347,7 @@ body {
     font-weight: 500;
 }
 
-/* ── Phones and tablets ───────────────────────────────────────────────────── */
+/* Phones and tablets */
 @media (max-width: 992px) {
     .sidebar {
         left: -100%;

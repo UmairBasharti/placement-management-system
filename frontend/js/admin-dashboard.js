@@ -26,7 +26,7 @@ const ACTIVITY_ICON = { upload: 'file-arrow-up', status: 'chart-line', event: 'c
 const APPLICATION_ICON = { Accepted: 'circle-check', Rejected: 'circle-xmark', Pending: 'clock' };
 const RESUME_BADGE = { approved: ['bg-success', 'Approved'], rejected: ['bg-danger', 'Rejected'], pending: ['bg-warning text-dark', 'Pending'] };
 
-// ── Small view helpers ───────────────────────────────────────────────────────
+// Small view helpers
 function emptyState(text) {
     return `<div class="empty-state">${esc(text)}</div>`;
 }
@@ -55,7 +55,7 @@ const companyMeta = (c) => `
         <span><i class="fas fa-indian-rupee-sign" aria-hidden="true"></i>${esc(c.package || 'Not disclosed')}</span>
     </div>`;
 
-// ── Dashboard ────────────────────────────────────────────────────────────────
+// Dashboard
 function renderDashboard() {
     const s = state.stats;
     $('kpi-students').textContent = s.totalStudents;
@@ -102,7 +102,7 @@ function renderDashboard() {
         : emptyState('No activity yet.');
 }
 
-// ── Companies ────────────────────────────────────────────────────────────────
+// Companies
 function renderCompanies() {
     const query = $('search-company').value.trim().toLowerCase();
     const type = $('filter-job-type').value;
@@ -307,7 +307,7 @@ async function addNote(id) {
     }
 }
 
-// ── Students ─────────────────────────────────────────────────────────────────
+// Students
 function renderStudents() {
     const query = $('search-students').value.trim().toLowerCase();
     const course = $('filter-course').value;
@@ -400,7 +400,7 @@ async function exportStudents() {
     }
 }
 
-// ── Resumes ──────────────────────────────────────────────────────────────────
+// Resumes
 function renderResumes() {
     $('resumes-list').innerHTML = state.resumes.length ? state.resumes.map((s) => {
         const [tone, label] = RESUME_BADGE[s.resume.status] || RESUME_BADGE.pending;
@@ -432,7 +432,7 @@ async function reviewResume(id, decision) {
     }
 }
 
-// ── Calendar ─────────────────────────────────────────────────────────────────
+// Calendar
 // "now" in the format datetime-local expects (local time, minutes)
 const localNow = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
@@ -501,7 +501,7 @@ async function deleteEvent(id) {
     }
 }
 
-// ── Section loaders ──────────────────────────────────────────────────────────
+// Section loaders
 const loaders = {
     async dashboard() {
         const [stats, activities] = await Promise.all([apiFetch('/admin/stats'), apiFetch('/admin/activities')]);
@@ -530,7 +530,7 @@ const loaders = {
     }
 };
 
-// ── Events ───────────────────────────────────────────────────────────────────
+// Events
 const actions = {
     'company-new': () => openCompanyForm(),
     'company-cancel': () => closeCompanyForm(),
@@ -563,7 +563,7 @@ document.addEventListener('change', (e) => {
  ['search-students', renderStudents], ['filter-course', renderStudents], ['filter-status', renderStudents]
 ].forEach(([id, render]) => $(id).addEventListener(id.startsWith('search') ? 'input' : 'change', render));
 
-// ── Start ────────────────────────────────────────────────────────────────────
+// Start
 if (user) {
     initSidebar();
     setEventForm();

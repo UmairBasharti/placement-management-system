@@ -4,7 +4,7 @@
 //                   separate item in the resume's Skills section (e.g. "Java, C, Python").
 // Matching ignores case. Add new skills here — nothing else needs to change.
 module.exports = [
-    // ── Programming languages ────────────────────────────────────────────────
+    // Programming languages
     ['JavaScript', ['js', 'ecmascript', 'es6']],
     ['TypeScript'],
     ['Python', ['python3']],
@@ -29,7 +29,7 @@ module.exports = [
     ['Sass', ['scss']],
     ['VBA', ['excel vba', 'vba macros']],
 
-    // ── Front end ────────────────────────────────────────────────────────────
+    // Front end
     ['React', ['react.js', 'reactjs', 'react js']],
     ['Angular', ['angularjs', 'angular.js']],
     ['Vue.js', ['vue', 'vuejs', 'vue js']],
@@ -44,7 +44,7 @@ module.exports = [
     ['Responsive Design', ['responsive web design', 'responsive layouts']],
     ['AJAX'],
 
-    // ── Back end ─────────────────────────────────────────────────────────────
+    // Back end
     ['Node.js', ['node', 'nodejs', 'node js']],
     ['Express.js', ['express', 'expressjs', 'express js'], { strict: true }],
     ['Django'],
@@ -64,7 +64,7 @@ module.exports = [
     ['Hibernate'],
     ['JSP', ['servlets', 'servlet']],
 
-    // ── Databases ────────────────────────────────────────────────────────────
+    // Databases
     ['MongoDB', ['mongo', 'mongo db']],
     ['MySQL'],
     ['PostgreSQL', ['postgres', 'postgre sql']],
@@ -80,7 +80,7 @@ module.exports = [
     ['NoSQL'],
     ['Database Management', ['dbms', 'rdbms', 'database design']],
 
-    // ── Cloud, DevOps, tools ─────────────────────────────────────────────────
+    // Cloud, DevOps, tools
     ['AWS', ['amazon web services', 'ec2']],
     ['Azure', ['microsoft azure']],
     ['Google Cloud', ['gcp', 'google cloud platform']],
@@ -98,7 +98,7 @@ module.exports = [
     ['Vercel'],
     ['Netlify'],
 
-    // ── Data, analytics, AI ──────────────────────────────────────────────────
+    // Data, analytics, AI
     ['Machine Learning', ['ml']],
     ['Deep Learning'],
     ['Data Science'],
@@ -125,14 +125,14 @@ module.exports = [
     ['Jupyter', ['jupyter notebook']],
     ['Matplotlib'],
 
-    // ── Mobile ───────────────────────────────────────────────────────────────
+    // Mobile
     ['Android', ['android development', 'android studio']],
     ['iOS', ['ios development']],
     ['Flutter'],
     ['React Native'],
     ['Xamarin'],
 
-    // ── Engineering practice, testing, design ────────────────────────────────
+    // Engineering practice, testing, design
     ['Data Structures', ['dsa', 'data structures and algorithms', 'data structure']],
     ['Algorithms', ['algorithm design']],
     ['OOP', ['object oriented programming', 'object-oriented programming', 'oops', 'object oriented design']],
@@ -161,7 +161,7 @@ module.exports = [
     ['Ethical Hacking'],
     ['Penetration Testing', ['pentesting']],
 
-    // ── Business, finance, marketing, HR (MBA) ───────────────────────────────
+    // Business, finance, marketing, HR (MBA)
     ['Financial Analysis', ['financial modelling', 'financial modeling', 'financial statement analysis', 'ratio analysis']],
     ['Accounting', ['financial accounting', 'bookkeeping', 'cost accounting']],
     ['Tally', ['tally erp', 'tally prime', 'tally erp 9']],
@@ -204,7 +204,7 @@ module.exports = [
     ['MIS', ['management information system', 'management information systems']],
     ['Process Improvement', ['six sigma', 'lean management', 'kaizen']],
 
-    // ── Soft skills ──────────────────────────────────────────────────────────
+    // Soft skills
     ['Communication', ['communication skills', 'verbal communication', 'written communication']],
     ['Leadership', ['team leadership', 'leadership skills']],
     ['Teamwork', ['team work', 'team player', 'collaboration']],

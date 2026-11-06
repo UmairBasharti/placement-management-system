@@ -1,0 +1,22 @@
+{
+  "name": "placement-management-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Placement Management System for Dr. B.V. Hiray College — repo-level tooling (the app itself lives in backend/ and frontend/)",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "npm test --prefix backend",
+    "start": "npm start --prefix backend",
+    "dev": "npm run dev --prefix backend",
+    "seed": "npm run seed --prefix backend"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^16.0.0"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "license": "MIT"
+}

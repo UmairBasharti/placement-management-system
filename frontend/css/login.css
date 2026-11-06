@@ -30,7 +30,7 @@ body {
     background: var(--primary-color);
 }
 
-/* ── The sliding card ─────────────────────────────────────────────────────── */
+/* The sliding card */
 .container {
     position: relative;
     width: 850px;
@@ -83,7 +83,7 @@ body {
     transform: translateX(0);
 }
 
-/* ── Fields ───────────────────────────────────────────────────────────────── */
+/* Fields */
 .input-box {
     position: relative;
     margin: 20px 0;
@@ -190,7 +190,7 @@ body {
     animation: spin 0.8s linear infinite;
 }
 
-/* ── The red panel that slides across ─────────────────────────────────────── */
+/* The red panel that slides across */
 .toggle-box {
     position: absolute;
     width: 100%;
@@ -278,7 +278,7 @@ body {
     transition-delay: 1.2s;
 }
 
-/* ── Messages ─────────────────────────────────────────────────────────────── */
+/* Messages */
 .alert-area {
     position: fixed;
     top: 20px;
@@ -312,7 +312,7 @@ body {
     to { transform: translateX(0); opacity: 1; }
 }
 
-/* ── Footer: on top of the card area only on tall, wide screens ───────────── */
+/* Footer: on top of the card area only on tall, wide screens */
 .footer {
     position: fixed;
     right: 0;
@@ -327,7 +327,7 @@ body {
     }
 }
 
-/* ── Phones: the card becomes a full-screen sheet ─────────────────────────── */
+/* Phones: the card becomes a full-screen sheet */
 @media (max-width: 650px) {
     /* icon-only so it never covers the form heading */
     .back-home {
