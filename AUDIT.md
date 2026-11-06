@@ -79,7 +79,7 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 ### S4 🟠 [V] Admin-private company notes are sent to students _(confirmed live against Atlas 2026-11-06: a student's `GET /api/companies` items include the `notes` key)_
 - **Where:** [company.routes.js:19](backend/routes/company.routes.js#L19) and [:30](backend/routes/company.routes.js#L30) return full documents including `notes`.
 - **Fix:** `.select('-notes')` when `req.user.role === 'student'`.
-- [ ] **Done when:** the student `GET /api/companies` response has no `notes` key.
+- [x] **Done when:** the student `GET /api/companies` response has no `notes` key. — **DONE 2026-11-06 (commit "S4 + B10")**: students get `select('-notes')` on list and detail; admin responses unchanged. Also fixed **B10**: `GET /companies/:id` for a student now requires an *active* company matching their branch (else 404) and no longer returns other students' application counts. Tested 6/6 against Atlas (list, detail, MBA-only → 404, admin still sees notes + stats).
 
 ### S5 🟠 [V] No hardening middleware
 - **Evidence:** 15 rapid failed logins all accepted; headers show `X-Powered-By: Express` and `Access-Control-Allow-Origin: *`; no CSP / HSTS / nosniff.
@@ -223,7 +223,7 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 | B7 | 🟠 | [C] | Rejecting a Pending application sets the student to "Unplaced" even if accepted elsewhere; history entries are added when nothing changed; Accepted→Pending doesn't undo Placed | [application.routes.js:119-134](backend/routes/application.routes.js#L119) | Derive student status from all their applications |
 | B8 | 🟠 | [C] | Apply skips eligibility: branch, `company.status === 'active'`, resume approved (the home page promises "admin-approved resumes") | [application.routes.js:35-53](backend/routes/application.routes.js#L35) | Add the 3 checks |
 | B9 | 🟡 | [C] | **Branch never validated** — `body('branch').notEmpty()` accepts any string; a student registered with `XYZ` sees zero companies. MCA/MBA hardcoded in 13 places across frontend + seed | [auth.routes.js:21](backend/routes/auth.routes.js#L21) | `isIn(BRANCHES)` from one shared constant; expose `GET /api/meta/branches` and render selects from it |
-| B10 | 🟡 | [C] | `GET /companies/:id` skips the branch/active filter the list applies | [company.routes.js:28](backend/routes/company.routes.js#L28) | Same filter for students |
+| B10 | ✅ | **DONE 2026-11-06 (with S4)** | ~~`GET /companies/:id` skips the branch/active filter the list applies~~ — fixed + verified | [company.routes.js:28](backend/routes/company.routes.js#L28) | Same filter for students |
 | B11 | 🟡 | [C] | Mass assignment in update (`...rest` → `status`, `notes`, `postedDate`…); `package` can't be cleared (`''` is falsy) | [company.routes.js:77-83](backend/routes/company.routes.js#L77) | Whitelist fields; check `!== undefined` |
 | B12 | 🟡 | [C] | Create with no branches stores `[undefined]`; ValidationError → 500 | [company.routes.js:57](backend/routes/company.routes.js#L57) | Validate with express-validator; ValidationError → 400 |
 | B13 | 🟡 | [C] | Invalid ObjectId on any `/:id` → CastError 500 | all `/:id` routes | `isMongoId()` param validator or CastError→400 |

@@ -16,9 +16,10 @@ router.get('/', protect, async (req, res) => {
             query.branches = req.user.branch;
         }
 
-        const companies = await Company.find(query).sort({ postedDate: -1 });
+        const finder = Company.find(query).sort({ postedDate: -1 });
+        if (req.user.role === 'student') finder.select('-notes');   // admin-private notes
 
-        res.json({ success: true, data: companies });
+        res.json({ success: true, data: await finder });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -27,12 +28,23 @@ router.get('/', protect, async (req, res) => {
 // GET /api/companies/:id — single company with application count
 router.get('/:id', protect, async (req, res) => {
     try {
+        // Students may only open active companies that match their branch — and never see admin notes
+        if (req.user.role === 'student') {
+            const filter = { _id: req.params.id, status: 'active' };
+            if (req.user.branch) filter.branches = req.user.branch;
+            const visible = await Company.findOne(filter).select('-notes');
+            if (!visible) {
+                return res.status(404).json({ success: false, message: 'Company not found' });
+            }
+            return res.json({ success: true, data: visible });
+        }
+
         const company = await Company.findById(req.params.id);
         if (!company) {
             return res.status(404).json({ success: false, message: 'Company not found' });
         }
 
-        // Include application stats
+        // Include application stats (admin only)
         const applications = await Application.find({ company: req.params.id });
         const stats = {
             total: applications.length,
