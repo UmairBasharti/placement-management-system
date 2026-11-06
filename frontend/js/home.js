@@ -1,183 +1,66 @@
-// ═══════════════════════════════════════════════════════════════
-//  HOME PAGE — navbar, scroll effects, counter animation
-//  Uses async/await throughout · clean & readable
-// ═══════════════════════════════════════════════════════════════
+// Home page: signed-in redirect, mobile menu, active link while scrolling, live statistics.
 
-// ── DOM Elements ──────────────────────────────────────────────
-const navbar      = document.getElementById('navbar');
-const hamburger   = document.getElementById('nav-hamburger');
-const navMenu     = document.getElementById('nav-menu');
-const navLinks    = document.querySelectorAll('.nav-menu .nav-link');
-const heroParticles = document.getElementById('hero-particles');
-
-// ── Redirect if already logged in ─────────────────────────────
-function checkExistingSession() {
-    const token = localStorage.getItem('token');
-    const user  = localStorage.getItem('currentUser');
-
-    if (!token || !user) return; // not logged in
-
+// A visitor who is already signed in goes straight to their dashboard
+(function redirectIfSignedIn() {
     try {
-        const parsed = JSON.parse(user);
-        if (parsed.role === 'admin') {
-            window.location.href = 'admin-dashboard.html';
-        } else {
-            window.location.href = 'student-dashboard.html';
+        const user = JSON.parse(localStorage.getItem('currentUser'));
+        if (localStorage.getItem('token') && user) {
+            window.location.replace(user.role === 'admin' ? 'admin-dashboard.html' : 'student-dashboard.html');
         }
-    } catch {
-        // invalid JSON in storage — ignore
-    }
-}
-checkExistingSession();
+    } catch { /* unreadable storage: show the page */ }
+})();
 
-// ── Mobile Menu Toggle ────────────────────────────────────────
-hamburger.addEventListener('click', () => {
-    hamburger.classList.toggle('active');
-    navMenu.classList.toggle('open');
+const hamburger = document.getElementById('nav-hamburger');
+const panel = document.getElementById('nav-panel');
+const navLinks = document.querySelectorAll('.nav-menu .nav-link');
+
+// ── Mobile menu ──────────────────────────────────────────────────────────────
+function setMenu(open) {
+    panel.classList.toggle('is-open', open);
+    hamburger.setAttribute('aria-expanded', String(open));
+    hamburger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+}
+
+hamburger.addEventListener('click', () => setMenu(!panel.classList.contains('is-open')));
+panel.addEventListener('click', (e) => { if (e.target.closest('a')) setMenu(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
+document.addEventListener('click', (e) => {
+    if (!panel.contains(e.target) && !hamburger.contains(e.target)) setMenu(false);   // tap outside
 });
+window.matchMedia('(min-width: 993px)').addEventListener('change', (e) => { if (e.matches) setMenu(false); });
 
-// Close menu when a link is clicked
-navLinks.forEach(link => {
-    link.addEventListener('click', () => {
-        hamburger.classList.remove('active');
-        navMenu.classList.remove('open');
+// ── Active menu link while scrolling ─────────────────────────────────────────
+const sections = [...document.querySelectorAll('main section[id]')];
+const linkFor = (id) => [...navLinks].find((l) => l.getAttribute('href') === `#${id}`);
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        navLinks.forEach((l) => l.classList.remove('active'));
+        linkFor(entry.target.id)?.classList.add('active');
     });
-});
+}, { rootMargin: '-45% 0px -50% 0px' });
+sections.forEach((section) => observer.observe(section));
 
-// ── Navbar scroll effect ──────────────────────────────────────
-window.addEventListener('scroll', () => {
-    if (window.scrollY > 50) {
-        navbar.classList.add('scrolled');
-    } else {
-        navbar.classList.remove('scrolled');
-    }
-});
-
-// ── Active nav link on scroll ─────────────────────────────────
-function updateActiveNavLink() {
-    const sections = document.querySelectorAll('section[id]');
-    const scrollPos = window.scrollY + 100;
-
-    sections.forEach(section => {
-        const top    = section.offsetTop;
-        const height = section.offsetHeight;
-        const id     = section.getAttribute('id');
-
-        if (scrollPos >= top && scrollPos < top + height) {
-            navLinks.forEach(link => {
-                link.classList.remove('active');
-                if (link.getAttribute('href') === `#${id}`) {
-                    link.classList.add('active');
-                }
-            });
-        }
-    });
-}
-window.addEventListener('scroll', updateActiveNavLink);
-
-// ── Smooth scroll for anchor links ────────────────────────────
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', (e) => {
-        const targetId = anchor.getAttribute('href');
-        if (targetId === '#') return;
-
-        e.preventDefault();
-        const target = document.querySelector(targetId);
-        if (target) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    });
-});
-
-// ── Animated stat counters ────────────────────────────────────
-function animateCounters() {
-    const counters = document.querySelectorAll('.hero-stat-number[data-count]');
-
-    counters.forEach(counter => {
-        const target   = parseInt(counter.dataset.count, 10);
-        const duration = 2000; // ms
-        const step     = Math.ceil(target / (duration / 16));
-        let current    = 0;
-
-        const tick = () => {
-            current += step;
-            if (current >= target) {
-                counter.textContent = target;
-                return;
-            }
-            counter.textContent = current;
-            requestAnimationFrame(tick);
-        };
-
-        tick();
-    });
+// ── Live statistics ──────────────────────────────────────────────────────────
+function countUp(el, target) {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion || target === 0) { el.textContent = target; return; }
+    const start = performance.now();
+    const duration = 1200;
+    (function frame(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        el.textContent = Math.round(target * progress);
+        if (progress < 1) requestAnimationFrame(frame);
+    })(start);
 }
 
-// ── Scroll-reveal for sections ────────────────────────────────
-function setupScrollReveal() {
-    // Add .reveal to all cards and steps
-    const revealTargets = document.querySelectorAll(
-        '.feature-card, .step, .contact-card'
-    );
-    revealTargets.forEach(el => el.classList.add('reveal'));
-
-    const observer = new IntersectionObserver(
-        (entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                    observer.unobserve(entry.target);
-                }
-            });
-        },
-        { threshold: 0.15 }
-    );
-
-    revealTargets.forEach(el => observer.observe(el));
-}
-
-// ── Floating particles in hero ────────────────────────────────
-function createParticles() {
-    if (!heroParticles) return;
-
-    for (let i = 0; i < 20; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'hero-particle';
-        particle.style.left   = `${Math.random() * 100}%`;
-        particle.style.top    = `${Math.random() * 100}%`;
-        particle.style.width  = `${4 + Math.random() * 6}px`;
-        particle.style.height = particle.style.width;
-        particle.style.animationDelay    = `${Math.random() * 10}s`;
-        particle.style.animationDuration = `${8 + Math.random() * 8}s`;
-        heroParticles.appendChild(particle);
-    }
-}
-
-// ── Counter trigger on hero visible ───────────────────────────
-function setupCounterTrigger() {
-    const hero = document.getElementById('hero');
-    if (!hero) return;
-
-    const observer = new IntersectionObserver(
-        (entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    animateCounters();
-                    observer.unobserve(entry.target);
-                }
-            });
-        },
-        { threshold: 0.3 }
-    );
-
-    observer.observe(hero);
-}
-
-// ── Initialize everything ─────────────────────────────────────
-function init() {
-    createParticles();
-    setupScrollReveal();
-    setupCounterTrigger();
-}
-
-init();
+fetch('/api/public/stats')
+    .then((res) => res.json())
+    .then(({ data }) => {
+        document.getElementById('hero-stats').hidden = false;
+        countUp(document.getElementById('stat-students'), data.students);
+        countUp(document.getElementById('stat-companies'), data.companies);
+        countUp(document.getElementById('stat-placed'), data.placed);
+    })
+    .catch(() => { /* no numbers rather than wrong ones: the block stays hidden */ });

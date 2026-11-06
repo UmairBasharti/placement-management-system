@@ -1,198 +1,140 @@
-// ═══════════════════════════════════════════════════════════════
-//  LOGIN / REGISTER — async/await, clean & readable
-// ═══════════════════════════════════════════════════════════════
+// Log in and registration. Needs utils.js (esc).
 
-const API = '/api';
+const $ = (id) => document.getElementById(id);
+const container = $('auth-container');
+const adminMode = new URLSearchParams(window.location.search).get('admin') === 'true';
 
-// ── Helpers ───────────────────────────────────────────────────
+// Already signed in? Go straight to the dashboard.
+try {
+    const stored = JSON.parse(localStorage.getItem('currentUser'));
+    if (localStorage.getItem('token') && stored) {
+        window.location.replace(stored.role === 'admin' ? 'admin-dashboard.html' : 'student-dashboard.html');
+    }
+} catch { /* unreadable storage: show the form */ }
 
-/**
- * Make an API call with JSON body.
- * Automatically attaches JWT if present.
- */
-async function apiFetch(endpoint, options = {}) {
-    const token = localStorage.getItem('token');
-
-    const response = await fetch(API + endpoint, {
-        headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        ...options
+// ── Helpers ──────────────────────────────────────────────────────────────────
+async function post(endpoint, body) {
+    const res = await fetch(`/api${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
     });
-
     let data;
-    try {
-        data = await response.json();
-    } catch {
-        throw new Error('Server returned an unexpected response');
-    }
-
-    if (!response.ok) {
-        throw new Error(data.message || 'Request failed');
-    }
-
+    try { data = await res.json(); } catch { throw new Error('The server sent an unexpected response'); }
+    if (!res.ok) throw new Error(data.message || 'Request failed');
     return data;
 }
 
-/**
- * Show a floating alert at the top-right corner.
- */
 function showAlert(message, type = 'danger') {
-    const icon = type === 'danger' ? 'exclamation-circle' : 'check-circle';
-    const div  = document.createElement('div');
-    div.className = `alert alert-${type}`;
-    div.innerHTML = `<i class="fas fa-${icon}"></i> ${esc(message)}`;
-    document.body.appendChild(div);
-
-    setTimeout(() => div.remove(), 3000);
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.setAttribute('role', type === 'danger' ? 'alert' : 'status');
+    alert.innerHTML = `<i class="fas fa-${type === 'danger' ? 'circle-exclamation' : 'circle-check'}" aria-hidden="true"></i><span>${esc(message)}</span>`;
+    $('alert-area').appendChild(alert);
+    setTimeout(() => alert.classList.add('leaving'), 3700);
+    setTimeout(() => alert.remove(), 4000);
 }
 
-/**
- * Toggle the loading spinner on a button.
- */
-function setLoading(button, isLoading) {
-    button.disabled = isLoading;
-    button.classList.toggle('is-loading', isLoading);   // NOT "loading": that class is the global full-screen overlay (display:none)
+function setLoading(button, loading) {
+    button.disabled = loading;
+    button.classList.toggle('is-loading', loading);
 }
 
-// ── Admin mode detection ──────────────────────────────────────
-const urlParams   = new URLSearchParams(window.location.search);
-const isAdminMode = urlParams.get('admin') === 'true';
-
-if (isAdminMode) {
-    // Update UI to show admin-specific login
-    const title = document.getElementById('login-title');
-    if (title) title.textContent = 'Admin Login';
-
-    // Hide register panel and toggle for admin mode
-    const registerFormBox = document.querySelector('.form-box.register');
-    const toggleBox       = document.querySelector('.toggle-box');
-    if (registerFormBox) registerFormBox.style.display = 'none';
-    if (toggleBox)       toggleBox.style.display       = 'none';
-
-    // Make the login form take full width in admin mode
-    const loginFormBox = document.querySelector('.form-box.login');
-    if (loginFormBox) {
-        loginFormBox.style.width    = '100%';
-        loginFormBox.style.position = 'relative';
-    }
+// ── Switching between the two forms ──────────────────────────────────────────
+function showRegister(register) {
+    container.classList.toggle('active', register);
+    // The hidden form must not be reachable with Tab or a screen reader
+    $('register-box').inert = !register;
+    $('login-box').inert = register;
+    (register ? $('register-name') : $('login-email')).focus({ preventScroll: true });
 }
 
-// ── Form switching (login ↔ register) ─────────────────────────
-const container   = document.querySelector('.container');
-const registerBtn = document.querySelector('.register-btn');
-const loginBtn    = document.querySelector('.login-btn');
+document.querySelector('.register-btn').addEventListener('click', () => showRegister(true));
+document.querySelector('.login-btn').addEventListener('click', () => showRegister(false));
+$('register-box').inert = true;
 
-if (registerBtn) {
-    registerBtn.addEventListener('click', () => container.classList.add('active'));
+if (adminMode) {
+    $('login-title').textContent = 'Admin log in';
+    document.querySelector('.toggle-box').remove();
+    $('register-box').remove();
+    $('login-box').style.cssText = 'position: relative; width: 100%;';
 }
-if (loginBtn) {
-    loginBtn.addEventListener('click', () => container.classList.remove('active'));
-}
 
-// ── Password visibility toggle ────────────────────────────────
-document.querySelectorAll('.toggle-password').forEach(icon => {
-    icon.addEventListener('click', function () {
-        const input = this.previousElementSibling;
-        const isHidden = input.type === 'password';
-
-        input.type = isHidden ? 'text' : 'password';
-        this.classList.toggle('bxs-lock-alt', !isHidden);
-        this.classList.toggle('bxs-lock-open-alt', isHidden);
+// ── Show / hide password ─────────────────────────────────────────────────────
+document.querySelectorAll('.toggle-password').forEach((button) => {
+    button.addEventListener('click', () => {
+        const input = button.parentElement.querySelector('input');
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        button.setAttribute('aria-pressed', String(show));
+        button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        button.firstElementChild.className = `fas fa-${show ? 'eye-slash' : 'eye'}`;
     });
 });
 
-// ── Register ──────────────────────────────────────────────────
-const registerForm = document.getElementById('register-form');
-if (registerForm) {
-    registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+// ── Course list from the server (the HTML keeps a fallback) ──────────────────
+fetch('/api/public/meta')
+    .then((res) => res.json())
+    .then(({ data }) => {
+        const select = $('register-branch');
+        if (!select || !data.branches.length) return;
+        select.length = 1;   // keep the "Select your course" placeholder
+        data.branches.forEach((branch) => select.add(new Option(branch, branch)));
+    })
+    .catch(() => { /* the fallback options in the HTML stay */ });
 
-        const btn = registerForm.querySelector('button[type="submit"]');
-        setLoading(btn, true);
-
-        const name            = document.getElementById('register-name').value.trim();
-        const email           = document.getElementById('register-email').value.trim();
-        const password        = document.getElementById('register-password').value;
-        const confirmPassword = document.getElementById('register-confirm-password').value;
-        const branch          = document.getElementById('register-branch').value;
-
-        if (password !== confirmPassword) {
-            showAlert('Passwords do not match!');
-            setLoading(btn, false);
-            return;
-        }
-
-        try {
-            // role is always 'student' — backend enforces it too
-            await apiFetch('/auth/register', {
-                method: 'POST',
-                body: JSON.stringify({ name, email, password, role: 'student', branch })
-            });
-
-            showAlert('Registration successful! Please login.', 'success');
-            container.classList.remove('active'); // switch to login view
-            registerForm.reset();
-        } catch (error) {
-            showAlert(error.message);
-        } finally {
-            setLoading(btn, false);
-        }
-    });
-}
-
-// ── Login ─────────────────────────────────────────────────────
-const loginForm = document.getElementById('login-form');
-loginForm.addEventListener('submit', async (e) => {
+// ── Register ─────────────────────────────────────────────────────────────────
+$('register-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const name = $('register-name').value.trim();
+    const email = $('register-email').value.trim();
+    const password = $('register-password').value;
+    const branch = $('register-branch').value;
 
-    const btn = loginForm.querySelector('button[type="submit"]');
-    setLoading(btn, true);
+    if (!name || !email || !branch) return showAlert('Please fill in every field.');
+    if (password.length < 6) return showAlert('Password must be at least 6 characters.');
+    if (password !== $('register-confirm-password').value) return showAlert('The two passwords do not match.');
 
-    const email    = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
-
+    const button = e.target.querySelector('button[type="submit"]');
+    setLoading(button, true);
     try {
-        const data = await apiFetch('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ email, password })
-        });
-
-        const userRole = data.user.role;
-
-        // ── Role enforcement BEFORE showing any success ──
-        //
-        // Admin login page (?admin=true) → only admin can log in
-        // Student login page (no param)  → only student can log in
-        if (isAdminMode && userRole !== 'admin') {
-            showAlert('Access denied — this login is for administrators only.', 'danger');
-            setLoading(btn, false);
-            return;   // don't store token, don't redirect
-        }
-
-        if (!isAdminMode && userRole === 'admin') {
-            showAlert('Access denied — admins must use the Admin Login page.', 'danger');
-            setLoading(btn, false);
-            return;   // don't store token, don't redirect
-        }
-
-        // Role is correct — store session and redirect
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('currentUser', JSON.stringify(data.user));
-
-        showAlert('Login successful!', 'success');
-
-        const destination = userRole === 'admin'
-            ? 'admin-dashboard.html'
-            : 'student-dashboard.html';
-
-        setTimeout(() => {
-            window.location.href = destination;
-        }, 800);
-    } catch (error) {
-        showAlert(error.message || 'Invalid email or password');
+        await post('/auth/register', { name, email, password, branch });
+        showAlert('Account created. You can log in now.', 'success');
+        e.target.reset();
+        showRegister(false);
+        $('login-email').value = email;
+        $('login-password').focus();
+    } catch (err) {
+        showAlert(err.message);
     } finally {
-        setLoading(btn, false);
+        setLoading(button, false);
+    }
+});
+
+// ── Log in ───────────────────────────────────────────────────────────────────
+$('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = $('login-email').value.trim();
+    const password = $('login-password').value;
+    if (!email || !password) return showAlert('Enter your email and password.');
+
+    const button = e.target.querySelector('button[type="submit"]');
+    setLoading(button, true);
+    try {
+        const { token, user } = await post('/auth/login', { email, password });
+
+        // Each login page only admits its own kind of user
+        if (adminMode && user.role !== 'admin') throw new Error('This login is for administrators only.');
+        if (!adminMode && user.role === 'admin') throw new Error('Administrators log in from the "Admin login" button on the home page.');
+
+        localStorage.setItem('token', token);
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        showAlert('Logged in. Redirecting…', 'success');
+        setTimeout(() => {
+            window.location.href = user.role === 'admin' ? 'admin-dashboard.html' : 'student-dashboard.html';
+        }, 500);
+    } catch (err) {
+        showAlert(err.message);
+        setLoading(button, false);
     }
 });

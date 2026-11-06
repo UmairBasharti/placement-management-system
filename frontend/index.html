@@ -3,249 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Placement Management System — Home</title>
+    <title>Placement Management System — Dr. B.V. Hiray College</title>
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-    <meta name="description" content="Placement Management System — connecting students with top companies for campus placements.">
+    <meta name="description" content="Campus placement portal of Dr. B.V. Hiray College of Management & Research Center: build your profile, upload your resume, apply to companies and track your applications.">
+    <meta name="theme-color" content="#bd0745">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Placement Management System — Dr. B.V. Hiray College">
+    <meta property="og:description" content="Build your profile, upload your resume, apply to companies and track every application in one place.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha384-nRgPTkuX86pH8yjPJUAFuASXQSSl2/bBUiNV47vSYpKFxHJhbcrGnmlYpYJMeD7a" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/home.css">
 </head>
 <body>
-
-    <!-- ── Navbar ─────────────────────────────────────────────── -->
-    <nav class="navbar" id="navbar">
+    <header class="navbar" id="navbar">
         <div class="nav-container">
             <a href="index.html" class="nav-logo">
-                <img src="assets/Hiray logo.png" alt="PMS Logo" class="nav-logo-img" onerror="this.style.display='none'">
+                <img src="assets/Hiray logo.png" alt="" class="nav-logo-img" width="40" height="40">
                 <span class="nav-logo-text">PMS</span>
             </a>
 
-            <ul class="nav-menu" id="nav-menu">
-                <li><a href="#hero" class="nav-link active">Home</a></li>
-                <li><a href="#features" class="nav-link">Features</a></li>
-                <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
-                <li><a href="#contact" class="nav-link">Contact</a></li>
-            </ul>
+            <nav class="nav-panel" id="nav-panel" aria-label="Main">
+                <ul class="nav-menu">
+                    <li><a href="#hero" class="nav-link active">Home</a></li>
+                    <li><a href="#features" class="nav-link">Features</a></li>
+                    <li><a href="#how-it-works" class="nav-link">How it works</a></li>
+                    <li><a href="#contact" class="nav-link">Contact</a></li>
+                </ul>
+                <div class="nav-actions">
+                    <a href="login.html" class="nav-btn nav-btn-outline"><i class="fas fa-user-graduate" aria-hidden="true"></i> Student login</a>
+                    <a href="login.html?admin=true" class="nav-btn nav-btn-filled"><i class="fas fa-user-shield" aria-hidden="true"></i> Admin login</a>
+                </div>
+            </nav>
 
-            <div class="nav-actions">
-                <a href="login.html" class="nav-btn nav-btn-outline" id="login-signup-btn">
-                    <i class="fas fa-user-graduate"></i> Login / Signup
-                </a>
-                <a href="login.html?admin=true" class="nav-btn nav-btn-filled" id="admin-login-btn">
-                    <i class="fas fa-user-shield"></i> Admin Login
-                </a>
-            </div>
-
-            <button class="nav-hamburger" id="nav-hamburger" aria-label="Toggle navigation">
-                <span></span>
-                <span></span>
-                <span></span>
+            <button type="button" class="nav-hamburger" id="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="nav-panel">
+                <span></span><span></span><span></span>
             </button>
         </div>
-    </nav>
+    </header>
 
-    <!-- ── Hero Section ──────────────────────────────────────── -->
-    <section class="hero" id="hero">
-        <div class="hero-particles" id="hero-particles"></div>
-        <div class="hero-content">
-            <div class="hero-badge">
-                <i class="fas fa-star"></i> Campus Placement Portal
-            </div>
-            <h1 class="hero-title">
-                Your Gateway to
-                <span class="gradient-text">Dream Placements</span>
-            </h1>
-            <p class="hero-subtitle">
-                Seamlessly connect with top companies, track your applications,
-                and accelerate your career — all from one unified platform.
-            </p>
-            <div class="hero-actions">
-                <a href="login.html" class="hero-btn hero-btn-primary">
-                    <i class="fas fa-rocket"></i> Get Started
-                </a>
-                <a href="#features" class="hero-btn hero-btn-ghost">
-                    <i class="fas fa-arrow-down"></i> Learn More
-                </a>
-            </div>
-            <div class="hero-stats">
-                <div class="hero-stat">
-                    <span class="hero-stat-number" data-count="500" data-suffix="+">0</span>
-                    <span class="hero-stat-label">Students Placed</span>
-                </div>
-                <div class="hero-stat-divider"></div>
-                <div class="hero-stat">
-                    <span class="hero-stat-number" data-count="50" data-suffix="+">0</span>
-                    <span class="hero-stat-label">Partner Companies</span>
-                </div>
-                <div class="hero-stat-divider"></div>
-                <div class="hero-stat">
-                    <span class="hero-stat-number" data-count="12">0</span>
-                    <span class="hero-stat-label">LPA Highest Package</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ── Features Section ──────────────────────────────────── -->
-    <section class="features" id="features">
-        <div class="section-container">
-            <div class="section-header">
-                <span class="section-tag">Features</span>
-                <h2 class="section-title">Everything You Need</h2>
-                <p class="section-subtitle">
-                    A complete placement ecosystem designed to streamline the entire recruitment process.
+    <main>
+        <section class="hero" id="hero">
+            <div class="hero-content">
+                <p class="hero-badge"><i class="fas fa-graduation-cap" aria-hidden="true"></i> Campus placement portal</p>
+                <h1 class="hero-title">Campus placements, <span class="accent">in one place</span></h1>
+                <p class="hero-subtitle">
+                    Students upload a resume, apply to companies open to their course and follow every application.
+                    The placement cell manages companies, resumes and events.
                 </p>
-            </div>
-
-            <div class="features-grid">
-                <div class="feature-card" data-aos="fade-up">
-                    <div class="feature-icon">
-                        <i class="fas fa-user-circle"></i>
-                    </div>
-                    <h3>Student Profiles</h3>
-                    <p>Build a professional profile with your skills, education, projects, and resume — ready for companies to review.</p>
+                <div class="hero-actions">
+                    <a href="login.html" class="hero-btn hero-btn-primary">Get started</a>
+                    <a href="#how-it-works" class="hero-btn hero-btn-ghost">How it works</a>
                 </div>
 
-                <div class="feature-card" data-aos="fade-up">
-                    <div class="feature-icon">
-                        <i class="fas fa-building"></i>
-                    </div>
-                    <h3>Company Listings</h3>
-                    <p>Browse through verified company listings with detailed job descriptions, requirements, and salary packages.</p>
-                </div>
-
-                <div class="feature-card" data-aos="fade-up">
-                    <div class="feature-icon">
-                        <i class="fas fa-paper-plane"></i>
-                    </div>
-                    <h3>One-Click Applications</h3>
-                    <p>Apply to multiple companies instantly. Track every application status in real-time from your dashboard.</p>
-                </div>
-
-                <div class="feature-card" data-aos="fade-up">
-                    <div class="feature-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <h3>Placement Tracking</h3>
-                    <p>Stay updated with live status — from application to interview to final placement offer.</p>
-                </div>
-
-                <div class="feature-card" data-aos="fade-up">
-                    <div class="feature-icon">
-                        <i class="fas fa-file-alt"></i>
-                    </div>
-                    <h3>Resume Management</h3>
-                    <p>Upload, manage, and get admin-approved resumes before they reach company recruiters.</p>
-                </div>
-
-                <div class="feature-card" data-aos="fade-up">
-                    <div class="feature-icon">
-                        <i class="fas fa-calendar-alt"></i>
-                    </div>
-                    <h3>Event Calendar</h3>
-                    <p>Never miss a placement drive, interview, or deadline with integrated calendar notifications.</p>
+                <div class="hero-stats" id="hero-stats" hidden>
+                    <div class="hero-stat"><span class="hero-stat-number" id="stat-students">0</span><span class="hero-stat-label">Registered students</span></div>
+                    <div class="hero-stat"><span class="hero-stat-number" id="stat-companies">0</span><span class="hero-stat-label">Companies hiring</span></div>
+                    <div class="hero-stat"><span class="hero-stat-number" id="stat-placed">0</span><span class="hero-stat-label">Students placed</span></div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- ── How It Works ──────────────────────────────────────── -->
-    <section class="how-it-works" id="how-it-works">
-        <div class="section-container">
-            <div class="section-header">
-                <span class="section-tag">Process</span>
-                <h2 class="section-title">How It Works</h2>
-                <p class="section-subtitle">
-                    Get placed in four simple steps.
-                </p>
-            </div>
-
-            <div class="steps-container">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
-                        <h3>Register & Build Profile</h3>
-                        <p>Create your account, fill in your academic details, skills, and upload your resume.</p>
-                    </div>
+        <section class="features" id="features">
+            <div class="section-container">
+                <div class="section-header">
+                    <h2 class="section-title">What you can do</h2>
+                    <p class="section-subtitle">Everything students and the placement cell need during campus recruitment.</p>
                 </div>
-                <div class="step-connector"></div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
-                        <h3>Browse Companies</h3>
-                        <p>Explore verified company listings, filter by branch and job type, and find the right fit.</p>
-                    </div>
-                </div>
-                <div class="step-connector"></div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
-                        <h3>Apply & Track</h3>
-                        <p>Submit applications with one click and track your status from pending to placed.</p>
-                    </div>
-                </div>
-                <div class="step-connector"></div>
-                <div class="step">
-                    <div class="step-number">4</div>
-                    <div class="step-content">
-                        <h3>Get Placed!</h3>
-                        <p>Receive your offer letter and kick-start your professional career.</p>
-                    </div>
+                <div class="features-grid">
+                    <article class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-user-circle" aria-hidden="true"></i></div>
+                        <h3>Profile and resume</h3>
+                        <p>Add your skills, education and projects. Upload a PDF resume and we suggest what to put on your profile — you choose what to keep.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i></div>
+                        <h3>Job recommendations</h3>
+                        <p>See the jobs open to your course ranked by how many of the required skills you already have, and which ones you are missing.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-building" aria-hidden="true"></i></div>
+                        <h3>Company listings</h3>
+                        <p>Browse companies with their job type, package, requirements and eligible courses. Search and filter to find the right fit.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-paper-plane" aria-hidden="true"></i></div>
+                        <h3>Application tracking</h3>
+                        <p>Apply with one click and follow each application from pending to accepted or rejected, along with your overall placement status.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-file-circle-check" aria-hidden="true"></i></div>
+                        <h3>Resume review</h3>
+                        <p>The placement cell reviews every resume before you can apply, so companies only see resumes that are ready.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-calendar-days" aria-hidden="true"></i></div>
+                        <h3>Events and notifications</h3>
+                        <p>Placement drives, workshops and mock interviews in one calendar, with a notification whenever something changes.</p>
+                    </article>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- ── Contact Section ───────────────────────────────────── -->
-    <section class="contact" id="contact">
-        <div class="section-container">
-            <div class="section-header">
-                <span class="section-tag">Contact</span>
-                <h2 class="section-title">Get In Touch</h2>
-                <p class="section-subtitle">
-                    Have questions about the placement process? We're here to help.
-                </p>
+        <section class="how-it-works" id="how-it-works">
+            <div class="section-container">
+                <div class="section-header">
+                    <h2 class="section-title">How it works</h2>
+                    <p class="section-subtitle">From registration to an offer, in four steps.</p>
+                </div>
+                <ol class="steps-container">
+                    <li class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content"><h3>Register</h3><p>Create an account and choose your course. Your course decides which companies you see.</p></div>
+                    </li>
+                    <li class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content"><h3>Complete your profile</h3><p>Add your skills and upload your resume. Review the suggestions we find in it and keep what is right.</p></div>
+                    </li>
+                    <li class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content"><h3>Get approved and apply</h3><p>Once the placement cell approves your resume, apply to the companies that suit you.</p></div>
+                    </li>
+                    <li class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content"><h3>Track your progress</h3><p>Your status moves from Under Review to Interview Scheduled to Placed, and you are notified at each step.</p></div>
+                    </li>
+                </ol>
             </div>
+        </section>
 
-            <div class="contact-grid">
-                <div class="contact-card">
-                    <div class="contact-icon"><i class="fas fa-envelope"></i></div>
-                    <h4>Email</h4>
-                    <p>placement@college.edu</p>
+        <section class="contact" id="contact">
+            <div class="section-container">
+                <div class="section-header">
+                    <h2 class="section-title">Contact</h2>
+                    <p class="section-subtitle">For questions about placements, contact the placement cell at the college.</p>
                 </div>
-                <div class="contact-card">
-                    <div class="contact-icon"><i class="fas fa-phone-alt"></i></div>
-                    <h4>Phone</h4>
-                    <p>+91 98765 43210</p>
-                </div>
-                <div class="contact-card">
-                    <div class="contact-icon"><i class="fas fa-map-marker-alt"></i></div>
-                    <h4>Office</h4>
-                    <p>Placement Cell, Main Building</p>
+                <div class="contact-grid">
+                    <div class="contact-card">
+                        <div class="contact-icon"><i class="fas fa-globe" aria-hidden="true"></i></div>
+                        <h3>College website</h3>
+                        <p><a href="https://dbhcmr.org" target="_blank" rel="noopener">dbhcmr.org</a></p>
+                    </div>
+                    <div class="contact-card">
+                        <div class="contact-icon"><i class="fas fa-location-dot" aria-hidden="true"></i></div>
+                        <h3>Address</h3>
+                        <p>Dr. B.V. Hiray College of Management &amp; Research Center, Malegaon (Nashik)</p>
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
+    </main>
 
-    <!-- ── Footer ────────────────────────────────────────────── -->
     <footer class="footer" id="site-footer">
         <div class="footer-content">
-            <div class="footer-links">
-                <a href="#hero">Home</a>
-                <a href="#features">Features</a>
-                <a href="#how-it-works">Process</a>
-                <a href="#contact">Contact</a>
-            </div>
-            <div class="footer-social">
-                <a href="#" aria-label="Facebook"><i class="fab fa-facebook"></i></a>
-                <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
-                <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
-                <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-            </div>
-            <div>
-                &copy; 2024 Placement Management System. All rights reserved.
-            </div>
+            <span>Placement Management System</span>
+            <span>Dr. B.V. Hiray College of Management &amp; Research Center, Malegaon</span>
         </div>
     </footer>
 

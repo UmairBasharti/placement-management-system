@@ -3,106 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Placement Management System - Login</title>
+    <title>Log in — Placement Management System</title>
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-    <meta name="description" content="Login to the Placement Management System to manage student profiles, company listings, and placement applications.">
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <meta name="description" content="Log in or register for the campus Placement Management System of Dr. B.V. Hiray College.">
+    <meta name="theme-color" content="#bd0745">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha384-nRgPTkuX86pH8yjPJUAFuASXQSSl2/bBUiNV47vSYpKFxHJhbcrGnmlYpYJMeD7a" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/login.css">
 </head>
 <body>
-    <!-- Back to home link -->
-    <a href="index.html" class="back-home" id="back-home">
-        <i class="fas fa-arrow-left"></i> Back to Home
-    </a>
+    <a href="index.html" class="back-home" aria-label="Back to home"><i class="fas fa-arrow-left" aria-hidden="true"></i><span class="back-home-text">Back to home</span></a>
 
-    <div class="container">
-        <div class="form-box login">
-            <form id="login-form">
-                <h1 id="login-title">Login</h1>
+    <main class="container" id="auth-container">
+        <div class="form-box login" id="login-box">
+            <form id="login-form" novalidate>
+                <h1 id="login-title">Log in</h1>
                 <div class="input-box">
-                    <input type="email" id="login-email" placeholder="Email" required>
-                    <i class='bx bxs-envelope'></i>
+                    <label class="visually-hidden" for="login-email">Email</label>
+                    <input type="email" id="login-email" name="email" placeholder="Email" autocomplete="username" required>
+                    <i class="fas fa-envelope" aria-hidden="true"></i>
                 </div>
                 <div class="input-box">
-                    <input type="password" id="login-password" placeholder="Password" required>
-                    <i class='bx bxs-lock-alt toggle-password'></i>
+                    <label class="visually-hidden" for="login-password">Password</label>
+                    <input type="password" id="login-password" name="password" placeholder="Password" autocomplete="current-password" required>
+                    <button type="button" class="toggle-password" aria-label="Show password" aria-pressed="false"><i class="fas fa-eye" aria-hidden="true"></i></button>
                 </div>
-                <button type="submit" class="btn">Login</button>
+                <button type="submit" class="btn">Log in</button>
             </form>
         </div>
 
-        <div class="form-box register">
-            <form id="register-form">
-                <h1>Registration</h1>
+        <div class="form-box register" id="register-box">
+            <form id="register-form" novalidate>
+                <h1>Register</h1>
                 <div class="input-box">
-                    <input type="text" id="register-name" placeholder="Full Name" required>
-                    <i class='bx bxs-user'></i>
+                    <label class="visually-hidden" for="register-name">Full name</label>
+                    <input type="text" id="register-name" name="name" placeholder="Full name" autocomplete="name" maxlength="100" required>
+                    <i class="fas fa-user" aria-hidden="true"></i>
                 </div>
                 <div class="input-box">
-                    <input type="email" id="register-email" placeholder="Email" required>
-                    <i class='bx bxs-envelope'></i>
+                    <label class="visually-hidden" for="register-email">Email</label>
+                    <input type="email" id="register-email" name="email" placeholder="Email" autocomplete="email" required>
+                    <i class="fas fa-envelope" aria-hidden="true"></i>
                 </div>
                 <div class="input-box">
-                    <input type="password" id="register-password" placeholder="Password" required>
-                    <i class='bx bxs-lock-alt toggle-password'></i>
+                    <label class="visually-hidden" for="register-password">Password (at least 6 characters)</label>
+                    <input type="password" id="register-password" name="password" placeholder="Password (min. 6 characters)" autocomplete="new-password" minlength="6" required>
+                    <button type="button" class="toggle-password" aria-label="Show password" aria-pressed="false"><i class="fas fa-eye" aria-hidden="true"></i></button>
                 </div>
                 <div class="input-box">
-                    <input type="password" id="register-confirm-password" placeholder="Confirm Password" required>
-                    <i class='bx bxs-lock-alt toggle-password'></i>
+                    <label class="visually-hidden" for="register-confirm-password">Confirm password</label>
+                    <input type="password" id="register-confirm-password" name="confirm-password" placeholder="Confirm password" autocomplete="new-password" required>
+                    <button type="button" class="toggle-password" aria-label="Show password" aria-pressed="false"><i class="fas fa-eye" aria-hidden="true"></i></button>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Select Branch</label>
-                    <select class="form-select" id="register-branch" required>
-                        <option value="">Select Branch</option>
+                <div class="input-box">
+                    <label class="visually-hidden" for="register-branch">Course</label>
+                    <select id="register-branch" name="branch" required>
+                        <option value="">Select your course</option>
                         <option value="MCA">MCA</option>
                         <option value="MBA">MBA</option>
                     </select>
+                    <i class="fas fa-chevron-down" aria-hidden="true"></i>
                 </div>
                 <button type="submit" class="btn">Register</button>
             </form>
         </div>
 
-        <div class="toggle-box">
+        <div class="toggle-box" aria-hidden="false">
             <div class="toggle-panel toggle-left">
-                <img src="assets/Hiray logo.png" alt="College Logo" class="college-logo" onerror="this.style.display='none'">
-                <h1>Hello, Welcome!</h1>
-                <p>Don't have an account?</p>
-                <button class="btn register-btn">Register</button>
+                <img src="assets/Hiray logo.png" alt="" class="college-logo" width="100" height="100">
+                <h2>New here?</h2>
+                <p>Create your student account.</p>
+                <button type="button" class="btn register-btn">Register</button>
             </div>
-
             <div class="toggle-panel toggle-right">
-                <img src="assets/Hiray logo.png" alt="College Logo" class="college-logo" onerror="this.style.display='none'">
-                <h1>Welcome Back!</h1>
+                <img src="assets/Hiray logo.png" alt="" class="college-logo" width="100" height="100">
+                <h2>Welcome back</h2>
                 <p>Already have an account?</p>
-                <button class="btn login-btn">Login</button>
+                <button type="button" class="btn login-btn">Log in</button>
             </div>
         </div>
-    </div>
+    </main>
+
+    <div id="alert-area" class="alert-area" role="status" aria-live="polite"></div>
 
     <footer class="footer">
         <div class="footer-content">
-            <div class="footer-links">
-                <a href="index.html">Home</a>
-                <a href="#">About Us</a>
-                <a href="#">Contact</a>
-                <a href="#">Privacy Policy</a>
-            </div>
-            <div class="footer-social">
-                <a href="#"><i class="fab fa-facebook"></i></a>
-                <a href="#"><i class="fab fa-twitter"></i></a>
-                <a href="#"><i class="fab fa-linkedin"></i></a>
-                <a href="#"><i class="fab fa-instagram"></i></a>
-            </div>
-            <div>
-                &copy; 2024 Placement Management System. All rights reserved.
-            </div>
+            <span>Placement Management System</span>
+            <span>Dr. B.V. Hiray College of Management &amp; Research Center, Malegaon</span>
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
     <script src="js/utils.js"></script>
     <script src="js/login.js"></script>
 </body>
