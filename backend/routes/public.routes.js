@@ -1,6 +1,7 @@
 const express = require('express');
 const Student = require('../models/student.model');
 const Company = require('../models/company.model');
+const { BRANCHES, JOB_TYPES } = require('../config/constants');
 
 const router = express.Router();
 
@@ -17,6 +18,12 @@ router.get('/stats', async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+});
+
+// GET /api/public/meta — option lists used by the forms (branches, job types)
+router.get('/meta', (req, res) => {
+    res.set('Cache-Control', 'public, max-age=300');
+    res.json({ success: true, data: { branches: BRANCHES, jobTypes: JOB_TYPES } });
 });
 
 module.exports = router;

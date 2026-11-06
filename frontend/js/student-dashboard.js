@@ -1,683 +1,590 @@
-// ═══════════════════════════════════════════════════════════════
-//  STUDENT DASHBOARD — all data from REST API, JWT-authenticated
-//  Fixes applied: #1 #2 #7 #8 #11
-// ═══════════════════════════════════════════════════════════════
+// Student dashboard: profile, resume, companies and applications, events, notifications.
+// Depends on utils.js and dashboard.js (apiFetch, requireRole, showNotification, initNavigation …).
 
-// Relative URL: works on any host/port
-const API = '/api';
+const user = requireRole('student');
 
-// Handle non-JSON responses gracefully
-async function apiFetch(endpoint, options = {}) {
-    const token = localStorage.getItem('token');
-    if (!token) { logout(); throw new Error(SESSION_EXPIRED); }
+const state = {
+    profile: null,
+    companies: [],
+    applications: [],
+    events: [],
+    recommended: [],           // jobs ranked for this student (all of them, best first)
+    matches: new Map(),        // company id → { matchScore, matchedSkills, missingSkills }
+    hasSkills: false
+};
 
-    // Merge custom headers instead of letting them replace Authorization
-    const { headers: extraHeaders, ...rest } = options;
-    const res = await fetch(API + endpoint, {
-        ...rest,
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            ...extraHeaders
-        }
-    });
+const $ = (id) => document.getElementById(id);
+const detailsModal = new bootstrap.Modal($('detailsModal'));
+const scanModal = new bootstrap.Modal($('scanModal'));
 
-    // Throw (not return undefined) so callers never crash on `res.data` while the redirect happens
-    if (res.status === 401) { logout(); throw new Error(SESSION_EXPIRED); }
+const PROGRESS = { 'Unplaced': 0, 'Under Review': 50, 'Interview Scheduled': 75, 'Placed': 100 };
+const APPLICATION_ICON = { Accepted: 'circle-check', Rejected: 'circle-xmark', Pending: 'clock' };
 
-    let data;
-    try {
-        data = await res.json();
-    } catch (e) {
-        throw new Error('Server returned an unexpected response');
-    }
-
-    if (!res.ok) throw new Error(data.message || 'Request failed');
-    return data;
-}
-
-function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('currentUser');
-    window.location.href = 'index.html'; // back to the home page
-}
-
-function showNotification(message, type = 'success') {
-    const container = document.getElementById('notificationContainer');
-    if (!container) return;
-    const div = document.createElement('div');
-    div.className = `notification ${type}`;
-    const icons = { success: 'check-circle', error: 'times-circle', warning: 'exclamation-triangle' };
-    div.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-${icons[type] || 'info-circle'} me-2"></i><span>${esc(message)}</span></div>`;
-    container.appendChild(div);
-    requestAnimationFrame(() => div.classList.add('show'));
-    setTimeout(() => {
-        div.classList.remove('show');
-        setTimeout(() => div.remove(), 300);
-    }, 3000);
-}
-
-// ── auth guard ────────────────────────────────────────────────
-let currentUser = null;
-try { currentUser = JSON.parse(localStorage.getItem('currentUser')); } catch { /* corrupt storage = logged out */ }
-const authorized = !!currentUser && currentUser.role === 'student';
-if (!authorized) logout();
-
-// In-memory state — fetched fresh from API on each section load
-let studentData = {};
-let allCompanies = [];
-let myApplications = [];
-let allEvents = [];
-
-// ── navigation ──
-document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', async function (e) {
-        e.preventDefault();
-        if (this.id === 'logout') { logout(); return; }
-
-        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-        this.classList.add('active');
-
-        const section = this.dataset.section;
-        document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
-        const target = document.getElementById(`${section}-section`);
-        if (target) {
-            target.style.display = 'block';
-            document.getElementById('section-title').textContent = this.textContent.trim();
-        }
-
-        if      (section === 'dashboard')     { await guarded(loadDashboard); }
-        else if (section === 'companies')      { await guarded(loadCompanies); }
-        else if (section === 'profile')        { renderProfile(); }
-        else if (section === 'resume')         { renderResume(); }
-        else if (section === 'notifications')  { await guarded(loadNotifications); }
-        else if (section === 'status')         { await guarded(loadStatusTimeline); }
-        else if (section === 'calendar')       { await guarded(loadCalendar); }
-    });
-});
-
-// mobile sidebar (button + overlay live in the HTML; logic is shared in utils.js)
-initSidebar();
-
-// ── data loaders ──────────────────────────────────────────────
+// ── Data ─────────────────────────────────────────────────────────────────────
 async function fetchProfile() {
-    const res = await apiFetch('/students/me');
-    studentData = res.data;
-}
-
-async function fetchCompanies() {
-    const res = await apiFetch('/companies');
-    allCompanies = res.data;
+    state.profile = (await apiFetch('/students/me')).data;
+    renderUnreadBadge();
+    renderPlacementStatus();
 }
 
 async function fetchApplications() {
-    const res = await apiFetch('/applications/my');
-    myApplications = res.data;
+    state.applications = (await apiFetch('/applications/my')).data;
 }
 
 async function fetchEvents() {
-    const res = await apiFetch('/events');
-    allEvents = res.data;
+    state.events = (await apiFetch('/events')).data;
 }
 
-// ── profile completion ────────────────────────────────────────
-// Only things the student fills in count (name and course are set at registration).
+async function fetchCompanies() {
+    state.companies = (await apiFetch('/companies')).data;
+}
+
+async function fetchRecommendations() {
+    const res = await apiFetch('/companies/recommended?limit=50');
+    state.recommended = res.data;
+    state.hasSkills = res.meta.hasSkills;
+    state.matches = new Map(res.data.map((r) => [r.company._id, r]));
+}
+
+const applicationFor = (companyId) => state.applications.find((a) => a.company && a.company._id === companyId);
+
+// ── Small view helpers ───────────────────────────────────────────────────────
+function emptyState(text, shortcuts = []) {
+    const buttons = shortcuts.map(([section, label]) =>
+        `<button type="button" class="btn btn-sm btn-outline-primary me-2" data-goto="${section}">${esc(label)}</button>`).join('');
+    return `<div class="empty-state"><p class="mb-2">${esc(text)}</p>${buttons}</div>`;
+}
+
+function applicationStatusLabel(status) {
+    return `<span class="status-${statusSlug(status)} fw-semibold"><i class="fas fa-${APPLICATION_ICON[status] || 'clock'}" aria-hidden="true"></i> ${esc(status)}</span>`;
+}
+
+function matchBadge(score) {
+    const level = score >= 70 ? '' : score >= 40 ? ' is-medium' : ' is-low';
+    return `<span class="match-badge${level}">${score}% match</span>`;
+}
+
+function skillChips(skills, kind, max = Infinity) {
+    const shown = skills.slice(0, max).map((s) => `<span class="skill-chip ${kind}">${esc(s)}</span>`).join('');
+    const more = skills.length > max ? `<span class="skill-chip ${kind}">+${skills.length - max} more</span>` : '';
+    return shown + more;
+}
+
+const companyMeta = (c) => `
+    <div class="company-meta">
+        <span><i class="fas fa-location-dot" aria-hidden="true"></i>${esc(c.location)}</span>
+        <span><i class="fas fa-briefcase" aria-hidden="true"></i>${esc(c.jobType)}</span>
+        <span><i class="fas fa-indian-rupee-sign" aria-hidden="true"></i>${esc(c.package || 'Not disclosed')}</span>
+    </div>`;
+
+const splitSkills = (text) => String(text || '').split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
 function profileChecks() {
-    const r = studentData.resume || {};
+    const p = state.profile;
+    const resume = p.resume || {};
     return {
-        skills: !!(studentData.skills || '').trim(),
-        education: !!(studentData.education || '').trim(),
-        projects: !!(studentData.projects || '').trim(),
-        resume: !!r.fileId,
-        approved: r.status === 'approved'
+        skills: Boolean((p.skills || '').trim()),
+        education: Boolean((p.education || '').trim()),
+        projects: Boolean((p.projects || '').trim()),
+        resume: Boolean(resume.fileId),
+        approved: resume.status === 'approved'
     };
 }
 
-function calculateProfileCompletion() {
-    const done = Object.values(profileChecks());
-    return Math.round(done.filter(Boolean).length / done.length * 100);
+function renderPlacementStatus() {
+    const status = state.profile.status || 'Unplaced';
+    for (const el of [$('current-status'), $('dash-status-badge')]) {
+        el.className = `status-badge status-${statusSlug(status)}`;
+        el.innerHTML = `<i class="fas fa-circle" aria-hidden="true"></i> ${esc(status)}`;
+    }
 }
 
-// ── dashboard ─────────────────────────────────────────────────
-async function loadDashboard() {
-    await Promise.all([fetchProfile(), fetchApplications(), fetchEvents()]);
+function renderDashboard() {
+    const p = state.profile;
+    renderPlacementStatus();
 
-    // profile completion
-    const pct = calculateProfileCompletion();
-    const bar = document.getElementById('profile-progress-bar');
-    if (bar) { bar.style.width = pct + '%'; bar.textContent = pct + '%'; }
-    const pctText = document.getElementById('profile-completion-pct');
-    if (pctText) pctText.textContent = `${pct}% Complete`;
+    const history = p.statusHistory || [];
+    $('status-updated-time').textContent = history.length
+        ? `Last updated: ${formatDateTime(history[history.length - 1].timestamp)}`
+        : 'Last updated: never';
+    const progress = PROGRESS[p.status] ?? 0;
+    $('status-progress-bar').style.width = `${progress}%`;
+    $('status-progress-bar').parentElement.setAttribute('aria-valuenow', progress);
 
-    // profile checklist
-    for (const [key, ok] of Object.entries(profileChecks())) {
-        document.getElementById('check-' + key).className = `fas fa-${ok ? 'check-circle text-success' : 'times-circle text-danger'} me-2`;
+    const count = (status) => state.applications.filter((a) => a.status === status).length;
+    const total = state.applications.length;
+    const [pending, accepted, rejected] = [count('Pending'), count('Accepted'), count('Rejected')];
+    $('app-total-count').textContent = total;
+    $('app-pending-label').innerHTML = `<i class="fas fa-clock" aria-hidden="true"></i> Pending: ${pending}`;
+    $('app-accepted-label').innerHTML = `<i class="fas fa-circle-check" aria-hidden="true"></i> Accepted: ${accepted}`;
+    $('app-rejected-label').innerHTML = `<i class="fas fa-circle-xmark" aria-hidden="true"></i> Rejected: ${rejected}`;
+    const share = (n) => `${total ? (n / total) * 100 : 0}%`;
+    $('pending-progress-bar').style.width = share(pending);
+    $('accepted-progress-bar').style.width = share(accepted);
+    $('rejected-progress-bar').style.width = share(rejected);
+
+    const checks = profileChecks();
+    const done = Object.values(checks).filter(Boolean).length;
+    const pct = Math.round((done / Object.keys(checks).length) * 100);
+    $('profile-progress-bar').style.width = `${pct}%`;
+    $('profile-progress-bar').parentElement.setAttribute('aria-valuenow', pct);
+    $('profile-completion-pct').textContent = `${pct}% complete`;
+    for (const [key, ok] of Object.entries(checks)) {
+        $(`check-${key}`).className = `fas fa-${ok ? 'circle-check text-success' : 'circle-xmark text-danger'} me-2`;
     }
 
-    // placement status badge
-    const statusBadge = document.getElementById('current-status');
-    const status = studentData.status || 'Unplaced';
-    if (statusBadge) {
-        statusBadge.className = `status-badge status-${status.toLowerCase().replace(/ /g, '-')} me-3`;
-        statusBadge.innerHTML = `<i class="fas fa-circle"></i> ${status}`;
-    }
-
-    // dashboard placement status card
-    const dashStatus = document.getElementById('dash-status-badge');
-    if (dashStatus) {
-        dashStatus.className = `status-badge status-${status.toLowerCase().replace(/ /g, '-')} me-3`;
-        dashStatus.innerHTML = `<i class="fas fa-circle"></i> ${status}`;
-    }
-
-    const statusTime = document.getElementById('status-updated-time');
-    if (statusTime) {
-        statusTime.textContent = studentData.statusHistory && studentData.statusHistory.length > 0
-            ? 'Last Updated: ' + new Date(studentData.statusHistory[studentData.statusHistory.length - 1].timestamp).toLocaleString()
-            : 'Last Updated: Never';
-    }
-
-    const statusBar = document.getElementById('status-progress-bar');
-    if (statusBar) {
-        const progress = { 'Placed': 100, 'Interview Scheduled': 75, 'Under Review': 50, 'Unplaced': 0 };
-        statusBar.style.width = (progress[status] || 0) + '%';
-    }
-
-    // application counts
-    const total     = myApplications.length;
-    const pending   = myApplications.filter(a => a.status === 'Pending').length;
-    const accepted  = myApplications.filter(a => a.status === 'Accepted').length;
-    const rejected  = myApplications.filter(a => a.status === 'Rejected').length;
-
-    const countEl = document.getElementById('app-total-count');
-    if (countEl) countEl.textContent = total;
-
-    const t = total || 1;
-    const pBar = document.getElementById('pending-progress-bar');
-    const aBar = document.getElementById('accepted-progress-bar');
-    const rBar = document.getElementById('rejected-progress-bar');
-    if (pBar) pBar.style.width = `${pending / t * 100}%`;
-    if (aBar) aBar.style.width = `${accepted / t * 100}%`;
-    if (rBar) rBar.style.width = `${rejected / t * 100}%`;
-
-    const pendingLabel  = document.getElementById('app-pending-label');
-    const acceptedLabel = document.getElementById('app-accepted-label');
-    const rejectedLabel = document.getElementById('app-rejected-label');
-    if (pendingLabel)  pendingLabel.innerHTML  = `<i class="fas fa-clock"></i> Pending: ${pending}`;
-    if (acceptedLabel) acceptedLabel.innerHTML = `<i class="fas fa-check-circle"></i> Accepted: ${accepted}`;
-    if (rejectedLabel) rejectedLabel.innerHTML = `<i class="fas fa-times-circle"></i> Rejected: ${rejected}`;
-
+    renderRecommended();
     renderRecentApplications();
     renderUpcomingEvents();
 }
 
+function renderRecommended() {
+    const el = $('recommended-list');
+    if (!state.hasSkills) {
+        el.innerHTML = emptyState('Add your skills or upload your resume to get job recommendations.', [['profile', 'Add skills'], ['resume', 'Upload resume']]);
+        return;
+    }
+    const top = state.recommended.slice(0, 6);
+    if (!top.length) {
+        el.innerHTML = emptyState('No matching jobs right now. New companies appear here as they are posted.');
+        return;
+    }
+    el.innerHTML = top.map(({ company: c, matchScore, matchedSkills, missingSkills }) => `
+        <div class="recommendation">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                    <h3>${esc(c.name)}</h3>
+                    ${companyMeta(c)}
+                </div>
+                ${matchBadge(matchScore)}
+            </div>
+            <div class="skill-row">${skillChips(matchedSkills, 'matched')}${skillChips(missingSkills, 'missing', 4)}</div>
+            <div class="company-actions">
+                <button type="button" class="action-btn view-btn" data-action="company-details" data-id="${esc(c._id)}">View details</button>
+                <button type="button" class="action-btn apply-btn" data-action="apply" data-id="${esc(c._id)}">Apply</button>
+            </div>
+        </div>`).join('');
+}
+
 function renderRecentApplications() {
-    const el = document.getElementById('recent-applications');
-    if (!el) return;
-    const recent = myApplications.slice(0, 3);   // the API returns newest first
-    el.innerHTML = recent.length ? recent.map(app => `
-        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-            <div>
-                <h6 class="mb-0">${esc(app.company ? app.company.name : 'Unknown')}</h6>
-                <small class="text-muted">Applied on: ${new Date(app.appliedDate).toLocaleString()}</small>
-            </div>
-            <div class="status-badge status-${app.status.toLowerCase()}">
-                <i class="fas fa-${app.status === 'Accepted' ? 'check-circle' : app.status === 'Rejected' ? 'times-circle' : 'clock'}"></i>
-                ${app.status}
-            </div>
-        </div>
-    `).join('') : '<div class="text-center text-muted">No recent applications</div>';
+    const recent = state.applications.slice(0, 3);   // the API returns newest first
+    $('recent-applications').innerHTML = recent.length
+        ? recent.map((a) => `
+            <div class="d-flex justify-content-between align-items-center gap-2 py-2 border-bottom">
+                <div>
+                    <h3 class="h6 mb-0">${esc(a.company ? a.company.name : 'Removed company')}</h3>
+                    <small class="text-muted">Applied on ${formatDate(a.appliedDate)}</small>
+                </div>
+                ${applicationStatusLabel(a.status)}
+            </div>`).join('')
+        : emptyState('You have not applied to any company yet.', [['companies', 'Browse companies']]);
 }
 
 function renderUpcomingEvents() {
-    const el = document.getElementById('upcoming-events');
-    if (!el) return;
-    const upcoming = allEvents
-        .filter(ev => new Date(ev.date) > new Date())
-        .slice(0, 3);
-    el.innerHTML = upcoming.length ? upcoming.map(ev => `
-        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-            <div>
-                <h6 class="mb-0">${esc(ev.title)}</h6>
-                <small class="text-muted"><i class="fas fa-clock me-1"></i>${new Date(ev.date).toLocaleString()}</small>
+    const upcoming = state.events.filter((ev) => new Date(ev.date) > new Date()).slice(0, 3);
+    $('upcoming-events').innerHTML = upcoming.length
+        ? upcoming.map((ev) => `
+            <div class="d-flex justify-content-between align-items-center gap-2 py-2 border-bottom">
+                <div>
+                    <h3 class="h6 mb-0">${esc(ev.title)}</h3>
+                    <small class="text-muted"><i class="fas fa-clock me-1" aria-hidden="true"></i>${formatDateTime(ev.date)}</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-action="event-details" data-id="${esc(ev._id)}" aria-label="Details of ${esc(ev.title)}">
+                    <i class="fas fa-circle-info" aria-hidden="true"></i>
+                </button>
+            </div>`).join('')
+        : emptyState('No upcoming events.');
+}
+
+// ── Companies ────────────────────────────────────────────────────────────────
+function renderCompanies() {
+    const query = $('search-company').value.trim().toLowerCase();
+    const type = $('filter-job-type').value;
+    const bestMatch = $('sort-companies').value === 'match';
+    const score = (c) => (state.matches.has(c._id) ? state.matches.get(c._id).matchScore : -1);
+    const newest = (a, b) => new Date(b.postedDate) - new Date(a.postedDate);
+
+    const list = state.companies
+        .filter((c) => (!query || c.name.toLowerCase().includes(query) || c.location.toLowerCase().includes(query)) && (!type || c.jobType === type))
+        .sort(bestMatch ? (a, b) => score(b) - score(a) || newest(a, b) : newest);
+
+    $('companies-list').innerHTML = list.length ? list.map((c) => {
+        const application = applicationFor(c._id);
+        const match = state.matches.get(c._id);
+        return `
+        <article class="company-card">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <h3>${esc(c.name)}</h3>
+                ${match ? matchBadge(match.matchScore) : ''}
             </div>
-            <button class="btn btn-sm btn-outline-primary" onclick="viewEventDetails('${ev._id}')">
-                <i class="fas fa-info-circle"></i>
-            </button>
+            ${companyMeta(c)}
+            <p class="mb-0">${esc(c.description)}</p>
+            <div class="company-tags">
+                <span class="company-tag">${esc(c.branches.join(', '))}</span>
+                ${c.requirements ? `<span class="company-tag">${esc(c.requirements)}</span>` : ''}
+            </div>
+            <div class="company-actions">
+                <button type="button" class="action-btn view-btn" data-action="company-details" data-id="${esc(c._id)}">View details</button>
+                ${application
+                    ? `<span class="application-status">${applicationStatusLabel(application.status)}<small class="text-muted">Applied on ${formatDate(application.appliedDate)}</small></span>`
+                    : `<button type="button" class="action-btn apply-btn" data-action="apply" data-id="${esc(c._id)}"><i class="fas fa-paper-plane me-1" aria-hidden="true"></i>Apply</button>`}
+            </div>
+        </article>`;
+    }).join('') : emptyState('No companies match your filters.');
+}
+
+function openCompanyDetails(id) {
+    const c = state.companies.find((x) => x._id === id) || (state.matches.get(id) || {}).company;
+    if (!c) return;
+    const application = applicationFor(id);
+    const match = state.matches.get(id);
+
+    $('detailsModalTitle').textContent = c.name;
+    $('detailsModalBody').innerHTML = `
+        <div class="detail-grid">
+            <div class="detail-item"><span class="label">Job type</span><span class="value">${esc(c.jobType)}</span></div>
+            <div class="detail-item"><span class="label">Package</span><span class="value">${esc(c.package || 'Not disclosed')}</span></div>
+            <div class="detail-item"><span class="label">Location</span><span class="value">${esc(c.location)}</span></div>
+            <div class="detail-item"><span class="label">Open to</span><span class="value">${esc(c.branches.join(', '))}</span></div>
+            <div class="detail-item"><span class="label">Requirements</span><span class="value">${esc(c.requirements || 'Not specified')}</span></div>
+            <div class="detail-item"><span class="label">Posted</span><span class="value">${formatDate(c.postedDate)}</span></div>
         </div>
-    `).join('') : '<div class="text-center text-muted">No upcoming events</div>';
+        <p class="mt-3">${esc(c.description)}</p>
+        ${match ? `
+            <h3 class="fs-6 mt-3">How you match <span class="ms-2">${matchBadge(match.matchScore)}</span></h3>
+            <div class="skill-row">${skillChips(match.matchedSkills, 'matched')}${skillChips(match.missingSkills, 'missing')}</div>
+            <p class="form-text">Green: skills you already have. Grey: skills this job asks for that are not on your profile yet.</p>` : ''}
+        <div class="mt-4">
+            ${application
+                ? `<div class="alert alert-secondary mb-0">Your application: ${applicationStatusLabel(application.status)} <small class="text-muted ms-2">Applied on ${formatDateTime(application.appliedDate)}</small></div>`
+                : `<button type="button" class="btn btn-primary" data-action="apply" data-id="${esc(c._id)}"><i class="fas fa-paper-plane me-1" aria-hidden="true"></i>Apply now</button>
+                   <p class="form-text mt-2 mb-0">You need skills on your profile and a resume approved by the placement cell.</p>`}
+        </div>`;
+    detailsModal.show();
 }
 
-// ── profile ───────────────────────────────────────────────────
+async function applyTo(companyId, button) {
+    button.disabled = true;
+    try {
+        await apiFetch('/applications', { method: 'POST', body: JSON.stringify({ companyId }) });
+        detailsModal.hide();
+        showNotification('Application submitted');
+        await Promise.all([fetchProfile(), fetchApplications(), fetchRecommendations()]);
+        renderDashboard();
+        renderCompanies();
+    } catch (err) {
+        showNotification(err.message, 'error');
+        button.disabled = false;
+    }
+}
+
+// ── Profile ──────────────────────────────────────────────────────────────────
 function renderProfile() {
-    document.getElementById('profile-name').value    = studentData.name    || '';
-    document.getElementById('profile-email').value   = studentData.email   || '';
-    document.getElementById('profile-course').value  = studentData.course  || '';
-    document.getElementById('profile-skills').value  = studentData.skills  || '';
-    document.getElementById('profile-education').value = studentData.education || '';
-    document.getElementById('profile-projects').value  = studentData.projects  || '';
+    const p = state.profile;
+    $('profile-name').value = p.name || '';
+    $('profile-email').value = p.email || '';
+    $('profile-course').value = p.course || '';
+    $('profile-skills').value = p.skills || '';
+    $('profile-education').value = p.education || '';
+    $('profile-projects').value = p.projects || '';
 }
 
-document.getElementById('profile-form').addEventListener('submit', async function (e) {
+$('profile-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
         await apiFetch('/students/me', {
             method: 'PUT',
             body: JSON.stringify({
-                name:      document.getElementById('profile-name').value,
-                skills:    document.getElementById('profile-skills').value,
-                education: document.getElementById('profile-education').value,
-                projects:  document.getElementById('profile-projects').value
+                name: $('profile-name').value,
+                skills: $('profile-skills').value,
+                education: $('profile-education').value,
+                projects: $('profile-projects').value
             })
         });
         await fetchProfile();
-        showNotification('Profile updated successfully!');
+        showNotification('Profile saved');
     } catch (err) {
         showNotification(err.message, 'error');
     }
 });
 
-// ── resume ────────────────────────────────────────────────────
+// ── Resume ───────────────────────────────────────────────────────────────────
+const RESUME_LOOK = {
+    approved: ['alert-success', 'circle-check', 'approved — you can apply to companies'],
+    pending: ['alert-warning', 'clock', 'waiting for approval by the placement cell'],
+    rejected: ['alert-danger', 'circle-xmark', 'rejected — please upload a new one']
+};
+
 function renderResume() {
-    updateResumeStatus();
-    updateResumePreview();
+    const r = state.profile.resume;
+    const uploaded = Boolean(r && r.fileId);
+
+    if (!uploaded) {
+        $('resume-status').innerHTML = '';
+        $('resume-preview').innerHTML = emptyState('No resume uploaded yet.');
+        return;
+    }
+    const [tone, icon, text] = RESUME_LOOK[r.status] || RESUME_LOOK.pending;
+    $('resume-status').innerHTML = `
+        <div class="alert ${tone} mb-0">
+            <i class="fas fa-${icon} me-2" aria-hidden="true"></i>Resume ${text}
+            <br><small>${esc(r.name)} · uploaded ${formatDateTime(r.uploadedAt)}</small>
+        </div>`;
+    $('resume-preview').innerHTML = `
+        <div class="resume-card">
+            <i class="fas fa-file-pdf resume-icon" aria-hidden="true"></i>
+            <p class="mb-1 fw-semibold">${esc(r.name)}</p>
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                <button type="button" class="btn btn-primary" data-action="open-resume"><i class="fas fa-eye me-1" aria-hidden="true"></i>View resume</button>
+                <button type="button" class="btn btn-outline-primary" data-action="scan-resume"><i class="fas fa-wand-magic-sparkles me-1" aria-hidden="true"></i>Fill my profile from this resume</button>
+            </div>
+        </div>`;
 }
 
-function updateResumeStatus() {
-    const el = document.getElementById('resume-status');
-    if (!el) return;
-    const r = studentData.resume;
-    if (r && r.fileId) {
-        const look = {
-            approved: ['alert-success', 'check-circle', 'approved'],
-            pending:  ['alert-warning', 'clock', 'waiting for approval'],
-            rejected: ['alert-danger', 'times-circle', 'rejected — please upload a new one']
-        }[r.status] || ['alert-warning', 'clock', 'waiting for approval'];
-        el.innerHTML = `
-            <div class="alert ${look[0]}">
-                <i class="fas fa-${look[1]} me-2"></i>
-                Resume ${look[2]}: ${esc(r.name)}
-                <br><small>Uploaded on: ${new Date(r.uploadedAt).toLocaleString()}</small>
-            </div>`;
-    } else {
-        el.innerHTML = `<div class="alert alert-secondary"><i class="fas fa-exclamation-circle me-2"></i>No resume uploaded yet</div>`;
-    }
-}
-
-function updateResumePreview() {
-    const el = document.getElementById('resume-preview');
-    if (!el) return;
-    const r = studentData.resume;
-    if (r && r.fileId) {
-        el.innerHTML = `
-            <div class="d-flex flex-column align-items-center justify-content-center h-100">
-                <i class="fas fa-file-pdf fa-3x mb-3" style="color:var(--primary-color)"></i>
-                <p class="mb-2">${esc(r.name)}</p>
-                <button type="button" class="btn btn-primary" data-action="open-resume">
-                    <i class="fas fa-eye me-2"></i>View Resume
-                </button>
-            </div>`;
-    } else {
-        el.innerHTML = `<div class="text-center text-muted"><i class="fas fa-file-alt fa-3x mb-3"></i><p>No resume uploaded yet</p></div>`;
-    }
-}
-
-// "View Resume" — fetched with the login token (the file is not publicly accessible)
-document.getElementById('resume-preview')?.addEventListener('click', async (e) => {
-    if (!e.target.closest('[data-action="open-resume"]')) return;
-    try {
-        await openProtectedPdf('/students/me/resume/file');
-    } catch (err) {
-        showNotification(err.message, 'error');
-    }
-});
-
-// Resume upload — uses FormData (multipart) instead of base64
-document.getElementById('resume-form').addEventListener('submit', async function (e) {
+$('resume-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const file = document.getElementById('resume-file').files[0];
+    const file = $('resume-file').files[0];
     if (!file) return;
-    if (!/\.pdf$/i.test(file.name)) { showNotification('Please choose a PDF file', 'error'); return; }
-    if (file.size > 5 * 1024 * 1024) { showNotification('File too large (maximum 5 MB)', 'error'); return; }
+    if (!/\.pdf$/i.test(file.name)) return showNotification('Please choose a PDF file', 'error');
+    if (file.size > 5 * 1024 * 1024) return showNotification('File too large (maximum 5 MB)', 'error');
 
-    const token = localStorage.getItem('token');
-    const formData = new FormData();
-    formData.append('resume', file);
-
+    const button = $('resume-submit');
+    button.disabled = true;
+    button.textContent = 'Uploading…';
     try {
-        const res = await fetch(API + '/students/me/resume', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}` },
-            body: formData
-        });
-        if (res.status === 401) { logout(); throw new Error(SESSION_EXPIRED); }
-        let data;
-        try { data = await res.json(); } catch (e) { throw new Error('Upload failed — unexpected server response'); }
-        if (!res.ok) throw new Error(data.message || 'Upload failed');
-
+        const form = new FormData();
+        form.append('resume', file);
+        await apiFetch('/students/me/resume', { method: 'POST', body: form });
+        e.target.reset();
         await fetchProfile();
         renderResume();
-        showNotification('Resume uploaded successfully!');
-        this.reset();
+        showNotification('Resume uploaded. The placement cell will review it.');
+        await scanResume({ auto: true });
     } catch (err) {
         showNotification(err.message, 'error');
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Upload';
     }
 });
 
-// ── companies ─────────────────────────────────────────────────
-async function loadCompanies() {
-    await Promise.all([fetchCompanies(), fetchApplications()]);
-    displayCompanies();
+// Read the resume on the server and offer the result in a dialog; nothing is saved until the student confirms
+async function scanResume({ auto = false } = {}) {
+    try {
+        const { data } = await apiFetch('/students/me/resume/suggestions');
+        if (!data.textFound) {
+            return showNotification('This PDF has no readable text (it may be a scan), so please fill in your profile by hand.', 'warning');
+        }
+        if (!data.skills.length && !data.education && !data.projects) {
+            return showNotification('We could not recognise any skills or sections in this resume. Please fill in your profile by hand.', 'warning');
+        }
+        openScanModal(data);
+    } catch (err) {
+        showNotification(err.message, auto ? 'warning' : 'error');
+    }
 }
 
-function displayCompanies() {
-    const el = document.getElementById('companies-list');
-    if (!el) return;
+function openScanModal(found) {
+    const p = state.profile;
+    const have = new Set(splitSkills(p.skills).map((s) => s.toLowerCase()));
 
-    const search  = (document.getElementById('search-company')?.value || '').toLowerCase();
-    const jobType = document.getElementById('filter-job-type')?.value || '';
-    const branch  = document.getElementById('filter-branch')?.value  || '';
+    $('scan-skills-block').hidden = !found.skills.length;
+    $('scan-skills').innerHTML = found.skills.map((skill) => {
+        const owned = have.has(skill.toLowerCase());
+        return `<label class="skill-chip scan-skill${owned ? ' matched' : ''}">
+            <input type="checkbox" value="${esc(skill)}" checked${owned ? ' disabled' : ''}> ${esc(skill)}${owned ? ' <small>(already on your profile)</small>' : ''}
+        </label>`;
+    }).join('');
 
-    let filtered = allCompanies.filter(c => {
-        const matchSearch  = c.name.toLowerCase().includes(search) || c.location.toLowerCase().includes(search);
-        const matchJobType = !jobType || c.jobType === jobType;
-        const matchBranch  = !branch  || c.branches.includes(branch);
-        return matchSearch && matchJobType && matchBranch;
-    });
+    for (const field of ['education', 'projects']) {
+        $(`scan-${field}-block`).hidden = !found[field];
+        $(`scan-${field}`).value = found[field];
+        $(`scan-${field}-use`).checked = !p[field];                       // pre-tick only if the profile field is empty
+        $(`scan-${field}-note`).textContent = p[field] ? '(replaces your current text)' : '';
+    }
+    scanModal.show();
+}
 
-    filtered.sort((a, b) => new Date(b.postedDate) - new Date(a.postedDate));
+$('scan-apply').addEventListener('click', async () => {
+    const chosen = [...document.querySelectorAll('#scan-skills input:checked:not(:disabled)')].map((i) => i.value);
+    const body = {};
+    if (chosen.length) body.skills = [...splitSkills(state.profile.skills), ...chosen].join(', ');
+    for (const field of ['education', 'projects']) {
+        const text = $(`scan-${field}`).value.trim();
+        if ($(`scan-${field}-use`).checked && text) body[field] = text;
+    }
+    if (!Object.keys(body).length) return scanModal.hide();
 
-    el.innerHTML = filtered.map(company => {
-        const app = myApplications.find(a => a.company && a.company._id === company._id);
+    $('scan-apply').disabled = true;
+    try {
+        await apiFetch('/students/me', { method: 'PUT', body: JSON.stringify(body) });
+        await Promise.all([fetchProfile(), fetchRecommendations()]);
+        renderProfile();
+        renderDashboard();
+        scanModal.hide();
+        showNotification('Your profile was updated from your resume');
+    } catch (err) {
+        showNotification(err.message, 'error');
+    } finally {
+        $('scan-apply').disabled = false;
+    }
+});
+
+// ── Status timeline ──────────────────────────────────────────────────────────
+function renderStatusTimeline() {
+    const history = [...(state.profile.statusHistory || [])].reverse();
+    $('status-timeline').innerHTML = history.length
+        ? history.map((h) => `
+            <div class="timeline-item">
+                <div class="timeline-content">
+                    <h3 class="h6 mb-1">${esc(h.status)}</h3>
+                    <small class="text-muted">${formatDateTime(h.timestamp)}</small>
+                    ${h.message ? `<p class="mt-2 mb-0">${esc(h.message)}</p>` : ''}
+                </div>
+            </div>`).join('')
+        : emptyState('No status changes yet. Your history appears here once you apply to a company.');
+}
+
+// ── Calendar ─────────────────────────────────────────────────────────────────
+function renderCalendar() {
+    const mine = new Set((state.profile.events || []).map((e) => e.eventId));
+    const events = [...state.events].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    $('calendar').innerHTML = events.length ? events.map((ev) => {
+        const upcoming = new Date(ev.date) > new Date();
+        const added = mine.has(ev._id);
         return `
-            <div class="company-card">
-                <div class="d-flex align-items-start">
-                    <div class="company-info ms-3">
-                        <h3>${esc(company.name)}</h3>
-                        <p><i class="fas fa-map-marker-alt"></i> ${esc(company.location)}</p>
-                        <p><i class="fas fa-briefcase"></i> ${esc(company.jobType)}</p>
-                        <p><i class="fas fa-rupee-sign"></i> ${esc(company.package || 'N/A')}</p>
-                        <p><i class="fas fa-calendar"></i> Posted: ${new Date(company.postedDate).toLocaleDateString()}</p>
-                    </div>
+        <div class="calendar-event ${upcoming ? 'upcoming' : 'past'}">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div>
+                    <h3 class="h6 mb-1">${esc(ev.title)}</h3>
+                    <small class="text-muted"><i class="fas fa-clock me-1" aria-hidden="true"></i>${formatDateTime(ev.date)}</small>
+                    ${ev.description ? `<p class="mt-2 mb-0">${esc(ev.description)}</p>` : ''}
+                    ${upcoming ? '' : '<span class="badge bg-secondary mt-2">Past event</span>'}
                 </div>
-                <p class="mt-2">${esc(company.description)}</p>
-                <div class="company-tags">
-                    <span class="company-tag">${esc(company.branches.join(', '))}</span>
-                    ${company.requirements ? `<span class="company-tag">${esc(company.requirements)}</span>` : ''}
-                </div>
-                <div class="company-actions">
-                    <button class="action-btn view-btn" onclick="viewCompanyDetails('${company._id}')">
-                        <i class="fas fa-eye"></i> View Details
-                    </button>
-                    ${!app ? `
-                        <button class="action-btn apply-btn" onclick="applyToCompany('${company._id}')">
-                            <i class="fas fa-paper-plane"></i> Apply
-                        </button>` : `
-                        <div class="application-status">
-                            <button class="action-btn ${app.status === 'Accepted' ? 'approve-btn' : app.status === 'Rejected' ? 'reject-btn' : 'status-pending'}" disabled>
-                                <i class="fas fa-${app.status === 'Accepted' ? 'check' : app.status === 'Rejected' ? 'times' : 'clock'}"></i>
-                                ${app.status}
-                            </button>
-                            <small class="text-muted">Applied on: ${new Date(app.appliedDate).toLocaleDateString()}</small>
-                        </div>`}
-                </div>
-            </div>`;
-    }).join('') || '<div class="alert alert-info">No companies found matching your criteria</div>';
-}
-
-window.viewCompanyDetails = function (companyId) {
-    const company = allCompanies.find(c => c._id === companyId);
-    if (!company) return;
-    const app = myApplications.find(a => a.company && a.company._id === companyId);
-
-    const modal = document.createElement('div');
-    modal.className = 'modal fade';
-    modal.innerHTML = `
-        <div class="modal-dialog company-details-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">${esc(company.name)}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="company-details-grid">
-                        <div class="detail-item"><label>Job Type</label><div class="value">${esc(company.jobType)}</div></div>
-                        <div class="detail-item"><label>Package</label><div class="value">${esc(company.package || 'N/A')}</div></div>
-                        <div class="detail-item"><label>Branches</label><div class="value">${esc(company.branches.join(', '))}</div></div>
-                        <div class="detail-item"><label>Requirements</label><div class="value">${esc(company.requirements || 'N/A')}</div></div>
-                        <div class="detail-item"><label>Location</label><div class="value">${esc(company.location)}</div></div>
-                    </div>
-                    <p class="mt-3">${esc(company.description)}</p>
-                    <div class="application-info mt-4">
-                        ${app ? `
-                            <div class="alert ${app.status === 'Accepted' ? 'alert-success' : app.status === 'Rejected' ? 'alert-danger' : 'alert-warning'}">
-                                <h6>Your Application Status</h6>
-                                <p class="mb-0">
-                                    <i class="fas fa-${app.status === 'Accepted' ? 'check-circle' : app.status === 'Rejected' ? 'times-circle' : 'clock'}"></i>
-                                    Status: ${app.status}
-                                </p>
-                                <small>Applied on: ${new Date(app.appliedDate).toLocaleString()}</small>
-                            </div>` : `
-                            <div class="alert alert-info">
-                                <h6>Ready to Apply?</h6>
-                                <p class="mb-0">Make sure your profile and resume are up to date.</p>
-                                <button class="btn btn-primary mt-2" onclick="applyToCompany('${companyId}')">
-                                    <i class="fas fa-paper-plane"></i> Apply Now
-                                </button>
-                            </div>`}
-                    </div>
+                <div class="event-actions">
+                    ${upcoming ? `<button type="button" class="btn btn-sm ${added ? 'btn-success' : 'btn-primary'}" data-action="calendar-toggle" data-id="${esc(ev._id)}" data-added="${added}">
+                        <i class="fas fa-${added ? 'check' : 'calendar-plus'} me-1" aria-hidden="true"></i>${added ? 'Added' : 'Add to my calendar'}</button>` : ''}
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-action="event-details" data-id="${esc(ev._id)}" aria-label="Details of ${esc(ev.title)}"><i class="fas fa-circle-info" aria-hidden="true"></i></button>
                 </div>
             </div>
         </div>`;
-    document.body.appendChild(modal);
-    const m = new bootstrap.Modal(modal);
-    m.show();
-    modal.addEventListener('hidden.bs.modal', () => modal.remove());
-};
-
-window.applyToCompany = async function (companyId) {
-    try {
-        await apiFetch('/applications', {
-            method: 'POST',
-            body: JSON.stringify({ companyId })
-        });
-        await Promise.all([fetchProfile(), fetchApplications()]);
-        displayCompanies();
-        renderRecentApplications();
-        showNotification('Application submitted successfully!');
-    } catch (err) {
-        showNotification(err.message, 'error');
-    }
-};
-
-// company filter listeners
-document.getElementById('search-company')?.addEventListener('input', displayCompanies);
-document.getElementById('filter-job-type')?.addEventListener('change', displayCompanies);
-document.getElementById('filter-branch')?.addEventListener('change', displayCompanies);
-
-// ── events / calendar ───────
-async function loadCalendar() {
-    await Promise.all([fetchEvents(), fetchProfile()]);
-    updateCalendar();
+    }).join('') : emptyState('No events scheduled yet.');
 }
 
-function updateCalendar() {
-    const el = document.getElementById('calendar');
-    if (!el) return;
-
-    const sorted = [...allEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
-    el.innerHTML = sorted.length ? sorted.map(ev => {
-        const isUpcoming = new Date(ev.date) > new Date();
-        const added = (studentData.events || []).some(e => e.eventId === ev._id);
-        return `
-            <div class="calendar-event ${isUpcoming ? 'upcoming' : 'past'}">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="mb-1">${esc(ev.title)}</h6>
-                        <p class="mb-0 text-muted"><small><i class="fas fa-clock me-2"></i>${new Date(ev.date).toLocaleString()}</small></p>
-                        ${ev.description ? `<p class="mt-2">${esc(ev.description)}</p>` : ''}
-                        ${!isUpcoming ? '<div class="mt-2"><span class="badge bg-secondary">Past Event</span></div>' : ''}
-                    </div>
-                    <div class="event-actions">
-                        ${isUpcoming ? `
-                            <button class="btn btn-sm ${added ? 'btn-success' : 'btn-primary'}"
-                                data-action="${added ? 'remove' : 'add'}" data-event-id="${esc(ev._id)}">
-                                <i class="fas fa-${added ? 'check' : 'calendar-plus'}"></i>
-                                ${added ? 'Added' : 'Add to Calendar'}
-                            </button>` : ''}
-                        <button class="btn btn-sm btn-info" data-action="details" data-event-id="${esc(ev._id)}" aria-label="Event details">
-                            <i class="fas fa-info-circle"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>`;
-    }).join('') : '<div class="alert alert-secondary">No events scheduled</div>';
-}
-
-// Calendar buttons carry only the event id (data attributes); the server copies the event's
-// title/date itself, so nothing typed by a user is trusted or placed in inline JavaScript.
-async function addToCalendar(ev) {
+async function toggleCalendar(button) {
+    const removing = button.dataset.added === 'true';
+    button.disabled = true;
     try {
-        await apiFetch('/students/me/events', {
-            method: 'POST',
-            body: JSON.stringify({ eventId: ev._id })
+        await apiFetch(removing ? `/students/me/events/${button.dataset.id}` : '/students/me/events', {
+            method: removing ? 'DELETE' : 'POST',
+            body: removing ? undefined : JSON.stringify({ eventId: button.dataset.id })
         });
         await fetchProfile();
-        updateCalendar();
-        showNotification('Event added to your calendar!');
+        showNotification(removing ? 'Removed from your calendar' : 'Added to your calendar');
     } catch (err) {
         showNotification(err.message, 'error');
     }
+    renderCalendar();   // also re-enables the button after a failure
 }
 
-async function removeFromCalendar(ev) {
-    try {
-        await apiFetch(`/students/me/events/${ev._id}`, { method: 'DELETE' });
-        await fetchProfile();
-        updateCalendar();
-        showNotification('Event removed from your calendar!');
-    } catch (err) {
-        showNotification(err.message, 'error');
-    }
-}
-
-document.getElementById('calendar')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-action]');
-    if (!btn) return;
-    const ev = allEvents.find(x => x._id === btn.dataset.eventId);
+function openEventDetails(id) {
+    const ev = state.events.find((x) => x._id === id);
     if (!ev) return;
-    if (btn.dataset.action === 'details') { window.viewEventDetails(ev._id); return; }
-    btn.disabled = true;   // prevent double-clicks while the request runs
-    const run = btn.dataset.action === 'add' ? addToCalendar(ev) : removeFromCalendar(ev);
-    run.finally(updateCalendar);   // re-render also re-enables the button after a failure
-});
-
-window.viewEventDetails = function (eventId) {
-    const ev = allEvents.find(e => e._id === eventId);
-    if (!ev) return;
-    const modal = document.createElement('div');
-    modal.className = 'modal fade';
-    modal.innerHTML = `
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">${esc(ev.title)}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p><strong>Date & Time:</strong> ${new Date(ev.date).toLocaleString()}</p>
-                    ${ev.description ? `<p><strong>Description:</strong> ${esc(ev.description)}</p>` : ''}
-                    <p><strong>Status:</strong> ${new Date(ev.date) > new Date() ? 'Upcoming' : 'Past'}</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>`;
-    document.body.appendChild(modal);
-    const m = new bootstrap.Modal(modal);
-    m.show();
-    modal.addEventListener('hidden.bs.modal', () => modal.remove());
-};
-
-// ── notifications ─────────────────────────────────────────────
-async function loadNotifications() {
-    await fetchProfile();
-    const el = document.getElementById('notifications-list');
-    if (!el) return;
-    const notifs = studentData.notifications || [];
-    el.innerHTML = notifs.length ? [...notifs].reverse().map(n => `
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle me-2"></i>${esc(n.message)}
-            <br><small>${new Date(n.timestamp).toLocaleString()}</small>
-        </div>`).join('') : '<div class="alert alert-secondary">No notifications yet</div>';
+    $('detailsModalTitle').textContent = ev.title;
+    $('detailsModalBody').innerHTML = `
+        <p><strong>When:</strong> ${formatDateTime(ev.date)} (${new Date(ev.date) > new Date() ? 'upcoming' : 'past'})</p>
+        ${ev.description ? `<p class="mb-0">${esc(ev.description)}</p>` : '<p class="text-muted mb-0">No further details.</p>'}`;
+    detailsModal.show();
 }
 
-// ── status timeline ───────────────────
-async function loadStatusTimeline() {
-    await fetchProfile();
-    updateStatusTimeline();
+// ── Notifications ────────────────────────────────────────────────────────────
+function renderUnreadBadge() {
+    const unread = (state.profile.notifications || []).filter((n) => !n.read).length;
+    const badge = $('unread-badge');
+    badge.hidden = unread === 0;
+    badge.textContent = unread > 99 ? '99+' : unread;
 }
 
-function updateStatusTimeline() {
-    const el = document.getElementById('status-timeline');
-    if (!el) return;
-    const hist = studentData.statusHistory || [];
-    el.innerHTML = hist.length ? [...hist].reverse().map(h => `
-        <div class="timeline-item">
-            <div class="timeline-content">
-                <h6 class="mb-1">${h.status}</h6>
-                <p class="mb-0 text-muted"><small>${new Date(h.timestamp).toLocaleString()}</small></p>
-                ${h.message ? `<p class="mt-2">${esc(h.message)}</p>` : ''}
-            </div>
-        </div>`).join('') : '<div class="text-center text-muted"><i class="fas fa-history fa-3x mb-3"></i><p>No status history yet</p></div>';
+function renderNotifications() {
+    const items = [...(state.profile.notifications || [])].reverse();
+    $('notifications-list').innerHTML = items.length
+        ? items.map((n) => `
+            <div class="notification-item${n.read ? '' : ' unread'}">
+                <i class="fas fa-bell" aria-hidden="true"></i>
+                <div>${esc(n.message)}<br><small class="text-muted">${formatDateTime(n.timestamp)}</small></div>
+            </div>`).join('')
+        : emptyState('No notifications yet.');
 }
 
-// ── refresh helpers ───────────────────────────────────────────
-window.refreshApplications = () => guarded(async () => {
-    await fetchApplications();
-    renderRecentApplications();
-    showNotification('Applications refreshed!');
-});
-
-window.refreshEvents = () => guarded(async () => {
-    await fetchEvents();
-    renderUpcomingEvents();
-    showNotification('Events refreshed!');
-});
-
-// ── init ──────────────────────────────────────────────────────
-async function init() {
-    try {
+// ── Section loaders ──────────────────────────────────────────────────────────
+const loaders = {
+    async dashboard() {
+        await Promise.all([fetchProfile(), fetchApplications(), fetchEvents(), fetchRecommendations()]);
+        renderDashboard();
+    },
+    async companies() {
+        await Promise.all([fetchProfile(), fetchCompanies(), fetchApplications(), fetchRecommendations()]);
+        renderCompanies();
+    },
+    async profile() {
         await fetchProfile();
         renderProfile();
-        updateResumeStatus();
-        updateResumePreview();
-        updateStatusTimeline();
-        await Promise.all([fetchCompanies(), fetchApplications(), fetchEvents()]);
-        displayCompanies();
-        updateCalendar();
-        renderRecentApplications();
-        renderUpcomingEvents();
-
-        document.getElementById('section-title').textContent = 'Dashboard';
-        document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
-        const dash = document.getElementById('dashboard-section');
-        if (dash) dash.style.display = 'block';
-
-        // Trigger dashboard load to populate data
-        await loadDashboard();
-    } catch (err) {
-        console.error('Init error:', err);
-        showLoadError('We could not load your dashboard. Please check your connection and try again.');
+    },
+    async resume() {
+        await fetchProfile();
+        renderResume();
+    },
+    async status() {
+        await fetchProfile();
+        renderStatusTimeline();
+    },
+    async calendar() {
+        await Promise.all([fetchProfile(), fetchEvents()]);
+        renderCalendar();
+    },
+    async notifications() {
+        await fetchProfile();
+        renderNotifications();
+        if (state.profile.notifications.some((n) => !n.read)) {
+            await apiFetch('/students/me/notifications/read', { method: 'PUT' });   // shown as unread this once
+            state.profile.notifications.forEach((n) => { n.read = true; });
+            renderUnreadBadge();
+        }
     }
-}
+};
 
-if (authorized) withLoading(init);
+// ── Events ───────────────────────────────────────────────────────────────────
+const actions = {
+    'apply': (el) => applyTo(el.dataset.id, el),
+    'company-details': (el) => openCompanyDetails(el.dataset.id),
+    'event-details': (el) => openEventDetails(el.dataset.id),
+    'calendar-toggle': (el) => toggleCalendar(el),
+    'open-resume': () => openProtectedPdf('/students/me/resume/file').catch((err) => showNotification(err.message, 'error')),
+    'scan-resume': () => scanResume(),
+    'refresh-applications': () => guarded(async () => {
+        await fetchApplications();
+        renderDashboard();
+        showNotification('Applications refreshed');
+    })
+};
 
-// Keyboard shortcut: Ctrl+F focuses company search
-document.addEventListener('keydown', function (e) {
-    if (e.ctrlKey && e.key === 'f') {
-        e.preventDefault();
-        document.getElementById('search-company')?.focus();
-    }
+document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-action]');
+    if (el && actions[el.dataset.action]) actions[el.dataset.action](el);
 });
+
+['search-company', 'filter-job-type', 'sort-companies'].forEach((id) => {
+    $(id).addEventListener(id === 'search-company' ? 'input' : 'change', renderCompanies);
+});
+
+// ── Start ────────────────────────────────────────────────────────────────────
+if (user) {
+    initSidebar();
+    withLoading(async () => {
+        await fillOptionLists().catch(() => {});
+        const ok = await initNavigation(loaders);
+        if (!ok) showLoadError('We could not load your dashboard. Please check your connection and try again.');
+    });
+}

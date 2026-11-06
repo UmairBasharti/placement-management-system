@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { BRANCHES } = require('../config/constants');
+const { BRANCHES, JOB_TYPES } = require('../config/constants');
 
 const companySchema = new mongoose.Schema({
     name: {
@@ -17,7 +17,7 @@ const companySchema = new mongoose.Schema({
     },
     jobType: {
         type: String,
-        enum: ['Full Time', 'Part Time', 'Internship'],
+        enum: JOB_TYPES,
         required: [true, 'Job type is required']
     },
     // Which branches are eligible — e.g. ['MCA', 'MBA']

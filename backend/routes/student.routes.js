@@ -56,15 +56,15 @@ router.put('/me', [
     validate
 ], async (req, res, next) => {
     try {
-        const { name, skills, education, projects } = req.body;
+        if (req.body.name) await User.findByIdAndUpdate(req.user._id, { name: req.body.name });
 
-        if (name) await User.findByIdAndUpdate(req.user._id, { name });
+        // Only the fields that were sent are changed (a missing field must not clear the stored value)
+        const update = {};
+        for (const field of ['skills', 'education', 'projects']) {
+            if (req.body[field] !== undefined) update[field] = req.body[field];
+        }
 
-        const student = await Student.findOneAndUpdate(
-            { user: req.user._id },
-            { skills, education, projects },
-            { new: true, runValidators: true }
-        );
+        const student = await Student.findOneAndUpdate({ user: req.user._id }, update, { new: true, runValidators: true });
         if (!student) {
             return res.status(404).json({ success: false, message: 'Student profile not found' });
         }

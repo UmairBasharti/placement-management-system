@@ -1,167 +1,78 @@
-/* Student Dashboard (page-specific overrides — common.css provides base) */
+/* Student dashboard only. Shared dashboard styles live in dashboard.css. */
 
-:root {
-    --sidebar-width: 280px;
-}
-
-body {
-    background-color: var(--light-bg);
-}
-
-/* ── Sidebar ─────────────────────────────────────────────────── */
-
-.sidebar {
-    background: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    color: white;
-    top: 0;
-    bottom: 0;
-    overflow-y: auto;
-    z-index: 1000;
-    width: var(--sidebar-width);
-    position: fixed;
-    left: 0;
-    padding: 2rem;
-    transition: all 0.3s ease;
-}
-
-.nav-link {
-    color: rgba(255,255,255,0.8);
-    margin: 5px 0;
-    padding: 12px 20px;
-    border-radius: 8px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-}
-
-.nav-link::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.1);
-    transform: scaleX(0);
-    transform-origin: right;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: -1;
-}
-
-.nav-link:hover, .nav-link.active {
-    color: white;
-    transform: translateX(5px);
-}
-
-.nav-link:hover::before, .nav-link.active::before {
-    transform: scaleX(1);
-    transform-origin: left;
-}
-
-.nav-link i {
-    margin-right: 10px;
-    transition: transform 0.3s ease;
-}
-
-.nav-link:hover i, .nav-link.active i {
-    transform: scale(1.2);
-}
-
-/* ── Main Content ────────────────────────────────────────────── */
-
-/* Sidebar is fixed; the content fills the rest of the row (no width:100% + margin overflow) */
-.app-layout {
-    display: flex;
-    min-height: 100vh;
-}
-
-/* Mobile top bar — only shown at <= 992px */
-.topbar {
-    display: none;
-}
-
-.main-content {
-    flex: 1 1 0;
-    min-width: 0;
-    margin-left: var(--sidebar-width);
-    padding: 2rem;
-    padding-bottom: 2rem;
-    transition: all 0.3s ease;
-}
-
-/* Long unbroken names/URLs wrap instead of pushing the layout wider. Bootstrap gives headings
-   overflow-wrap:break-word, which does not let flex items shrink — `anywhere` does.
-   Tables are excluded on purpose (they scroll sideways inside .table-responsive). */
-.main-content :is(h1, h2, h3, h4, h5, h6, p, small, span, div, label, li) {
-    overflow-wrap: anywhere;
-}
-
-/* ── Cards ────────────────────────────────────────────────────── */
-
-.card {
-    background: white;
-    border: none;
-    border-radius: 12px;
+/* Filters above the company list */
+.filters-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding: 1rem;
+    border-radius: 10px;
+    background: #fff;
     box-shadow: var(--card-shadow);
-    margin-bottom: 1.5rem;
-    transition: all 0.3s ease;
 }
 
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+/* Progress bars */
+.progress-bar {
+    transition: width 0.6s ease;
 }
 
-/* Status badges — base styles are in common.css */
-
-/* Notifications — base styles are in common.css */
-
-/* ── Forms ────────────────────────────────────────────────────── */
-
-.form-control {
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-    border: 2px solid #e2e8f0;
-    transition: all 0.3s ease;
+.application-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-.form-control:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+/* Recommendations */
+.recommendation {
+    padding: 1rem 0;
+    border-bottom: 1px solid #edf0f3;
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
+.recommendation:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.recommendation:first-child {
+    padding-top: 0;
+}
+
+.recommendation h3 {
+    margin: 0;
+    font-size: 1.05rem;
     font-weight: 600;
-    transition: all 0.3s ease;
 }
 
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.5);
+.recommendation .company-meta {
+    margin: 0.25rem 0 0.5rem;
 }
 
-/* ── Timeline ────────────────────────────────────────────────── */
+.skill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.4rem;
+}
 
+/* Status timeline */
 .timeline {
     position: relative;
-    padding: 1rem 0;
+    padding: 0.5rem 0;
 }
 
 .timeline-item {
     position: relative;
+    margin-bottom: 1.25rem;
     padding-left: 2rem;
-    margin-bottom: 1.5rem;
 }
 
 .timeline-item::before {
     content: '';
     position: absolute;
-    left: 0;
     top: 0;
+    left: 6px;
     width: 2px;
     height: 100%;
     background: #e2e8f0;
@@ -170,8 +81,8 @@ body {
 .timeline-item::after {
     content: '';
     position: absolute;
-    left: -6px;
-    top: 0;
+    top: 0.35rem;
+    left: 0;
     width: 14px;
     height: 14px;
     border-radius: 50%;
@@ -179,476 +90,63 @@ body {
 }
 
 .timeline-content {
-    background: white;
     padding: 1rem;
     border-radius: 8px;
+    background: #fff;
     box-shadow: var(--card-shadow);
 }
 
-/* ── Resume ──────────────────────────────────────────────────── */
-
-.resume-preview {
-    max-width: 100%;
-    height: 500px;
+/* Resume page */
+.resume-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 2rem 1rem;
     border: 2px dashed #e2e8f0;
     border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 1rem;
+    text-align: center;
 }
 
-.resume-preview iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
-}
-
-/* ── Calendar Events ─────────────────────────────────────────── */
-
-.calendar-event {
-    background: white;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    box-shadow: var(--card-shadow);
-    transition: all 0.3s ease;
-    border: 1px solid #e0e0e0;
-}
-
-.calendar-event:hover {
-    transform: translateX(5px);
-}
-
-.calendar-event.upcoming {
-    border-left: 4px solid var(--primary-color);
-}
-
-.calendar-event.past {
-    opacity: 0.7;
-    border-left: 4px solid #6c757d;
-}
-
-.event-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-/* ── Companies ───────────────────────────────────────────────── */
-
-.company-card {
-    background: white;
-    border-radius: 10px;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-    border: 1px solid #e0e0e0;
-}
-
-.company-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
-}
-
-.company-logo {
-    width: 80px;
-    height: 80px;
-    object-fit: contain;
-    margin-bottom: 1rem;
-    border-radius: 8px;
-    background: #f8f9fa;
-    padding: 0.5rem;
-}
-
-.company-info h3 {
+.resume-card .resume-icon {
+    font-size: 2.5rem;
     color: var(--primary-color);
-    margin-bottom: 0.5rem;
 }
 
-.company-info p {
-    color: #666;
-    margin-bottom: 0.5rem;
-}
-
-.company-tags {
+/* Notifications */
+.notification-item {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin: 1rem 0;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding: 0.85rem 1rem;
+    border-left: 4px solid #cbd5e1;
+    border-radius: 8px;
+    background: #f8fafc;
 }
 
-.company-tag {
-    background: #f0f2f5;
-    color: #666;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
+.notification-item.unread {
+    border-left-color: var(--primary-color);
+    background: #fdf2f6;
 }
 
-.apply-btn {
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 0.5rem 1.5rem;
-    border-radius: 5px;
+.notification-item i {
+    margin-top: 0.2rem;
+    color: var(--primary-color);
+}
+
+/* "Fill my profile from my resume" dialog */
+.scan-skill {
     cursor: pointer;
-    transition: all 0.3s ease;
-    width: 100%;
-    margin-top: 1rem;
-    position: relative;
-    overflow: hidden;
 }
 
-.apply-btn:hover {
-    background: var(--secondary-color);
-    transform: translateY(-2px);
-}
-
-.apply-btn.applied {
-    background: #4caf50;
-    cursor: not-allowed;
-}
-
-.apply-btn::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 5px;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.5);
-    opacity: 0;
-    border-radius: 100%;
-    transform: scale(1, 1) translate(-50%);
-    transform-origin: 50% 50%;
-}
-
-.apply-btn:focus:not(:active)::after {
-    animation: ripple 1s ease-out;
-}
-
-@keyframes ripple {
-    0% { transform: scale(0, 0); opacity: 0.5; }
-    100% { transform: scale(20, 20); opacity: 0; }
-}
-
-/* Card action buttons (previously only styled in the admin stylesheet → raw grey browser buttons) */
-.company-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 1rem;
-}
-
-.action-btn {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.action-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-.action-btn:disabled {
-    cursor: default;
-}
-
-.view-btn { background: #9c27b0; color: white; }
-.approve-btn { background: #4caf50; color: white; }
-.reject-btn { background: #f44336; color: white; }
-.action-btn.status-pending { background: #fff3e0; color: #e65100; }
-
-/* inside the button row the Apply button sizes to its content instead of filling the card */
-.company-actions .apply-btn {
-    width: auto;
-    margin-top: 0;
-}
-
-.company-filters {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-}
-
-.filter-select {
-    padding: 0.5rem 1rem;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    background: white;
-    min-width: 150px;
-}
-
-.search-box {
-    flex: 1;
-    min-width: 200px;
-}
-
-.search-box input {
-    width: 100%;
-    padding: 0.5rem 1rem;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    background: white;
-}
-
-.application-status {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    padding: 0.5rem;
-    border-radius: 5px;
-    background: #f8f9fa;
-}
-
-/* ── Progress Bars ───────────────────────────────────────────── */
-
-.progress {
-    height: 10px;
-    border-radius: 5px;
-    background-color: #f0f0f0;
-}
-
-.progress-bar {
-    transition: width 0.6s ease;
-}
-
-/* Loading — base styles are in common.css */
-
-/* Footer — dashboard-specific override (fixed + sidebar offset) */
-.footer {
-    margin-left: var(--sidebar-width);
-}
-
-/* ── Mobile Responsive ───────────────────────────────────────── */
-
-@media (max-width: 992px) {
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: -100%;
-        width: 80%;
-        max-width: 300px;
-        height: 100vh;
-        height: 100dvh;
-        z-index: 1000;
-        transition: all 0.3s ease;
-    }
-
-    .sidebar.active {
-        left: 0;
-    }
-
-    .main-content {
-        margin-left: 0;
-        padding: 1rem;
-        padding-bottom: 1.5rem;
-    }
-
-    .nav-link {
-        padding: 0.75rem 1rem;
-    }
-
-    .nav-link i {
-        font-size: 1.1rem;
-    }
-
-    .card {
-        margin-bottom: 1rem;
-    }
-
-    .profile-header {
-        flex-direction: column;
-        text-align: center;
-        gap: 1rem;
-    }
-
-    .profile-actions {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .status-badge {
-        font-size: 0.7rem;
-        padding: 0.25rem 0.5rem;
-    }
-
-    .timeline-item {
-        padding-left: 1.5rem;
-    }
-
-    .calendar-event {
-        padding: 0.75rem;
-    }
-
-    .event-actions {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .event-actions button {
-        width: 100%;
-    }
-
-    .topbar {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        position: sticky;
-        top: 0;
-        z-index: 900;
-        height: 56px;
-        padding: 0 1rem;
-        background: #fff;
-        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    .topbar-title {
-        font-weight: 700;
-        color: var(--primary-color);
-    }
-
-    .mobile-menu-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 40px;
-        height: 40px;
-        border: none;
-        border-radius: 50%;
-        background: var(--primary-color);
-        color: #fff;
-    }
-
-    .sidebar-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        z-index: 999;
-    }
-
-    .sidebar-overlay.active {
-        display: block;
-    }
-
-    .footer {
-        margin-left: 0;
-    }
-
-    .company-filters {
-        flex-direction: column;
-    }
-
-    .filter-select,
-    .search-box {
-        width: 100%;
-    }
-
-    .company-logo {
-        width: 60px;
-        height: 60px;
-    }
-}
-
-@media (max-width: 576px) {
-    .main-content {
-        padding: 0.75rem;
-        padding-bottom: 1.5rem;
-    }
-
-    .form-control {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.9rem;
-    }
-
-    .btn {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.9rem;
-    }
-
-    .modal-dialog {
-        margin: 0.5rem;
-    }
-
-    .notification-item {
-        padding: 0.75rem;
-    }
-
-    .calendar-event {
-        padding: 0.5rem;
-    }
-}
-
-@media (max-height: 600px) and (orientation: landscape) {
-    .sidebar {
-        overflow-y: auto;
-    }
-
-    .main-content {
-        padding: 0.75rem;
-        padding-bottom: 1.5rem;
-    }
-
-    .card {
-        margin-bottom: 0.75rem;
-    }
+.scan-skill input {
+    accent-color: var(--primary-color);
+    margin: 0;
 }
 
 @media (max-width: 768px) {
-    .footer-content {
-        flex-direction: column;
-        gap: 1rem;
+    .filters-bar {
+        grid-template-columns: 1fr;
     }
-
-    .footer-links {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 1rem;
-    }
-
-    .footer-social {
-        justify-content: center;
-    }
-}
-
-/* ── Company Details Modal ───────────────────────────────────── */
-
-.company-details-modal {
-    max-width: 800px;
-}
-
-.company-details-modal .modal-body {
-    padding: 2rem;
-}
-
-.company-details-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-}
-
-.detail-item {
-    margin-bottom: 1rem;
-}
-
-.detail-item label {
-    display: block;
-    color: #666;
-    margin-bottom: 0.25rem;
-}
-
-.detail-item .value {
-    font-weight: 500;
-    color: var(--text-color);
 }

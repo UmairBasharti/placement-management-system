@@ -3,370 +3,314 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Dashboard - PMS</title>
+    <title>Student Dashboard — Placement Management System</title>
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-    <meta name="description" content="Student placement dashboard — manage your profile, track applications, and view company listings.">
+    <meta name="description" content="Student placement dashboard: manage your profile and resume, apply to companies and track your applications.">
+    <meta name="theme-color" content="#bd0745">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha384-nRgPTkuX86pH8yjPJUAFuASXQSSl2/bBUiNV47vSYpKFxHJhbcrGnmlYpYJMeD7a" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/student-dashboard.css">
 </head>
 <body>
-    <!-- Mobile top bar (hidden on desktop) -->
+    <noscript><div class="alert alert-warning m-3">This portal needs JavaScript. Please enable it and reload the page.</div></noscript>
+
     <header class="topbar">
         <button type="button" class="mobile-menu-toggle" id="mobile-menu-btn" aria-label="Open menu" aria-expanded="false">
-            <i class="fas fa-bars"></i>
+            <i class="fas fa-bars" aria-hidden="true"></i>
         </button>
         <span class="topbar-title">PMS</span>
     </header>
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
     <div class="app-layout">
-            <!-- Sidebar -->
-            <div class="sidebar">
-                <h4 class="mb-4">PMS</h4>
-                <nav class="nav flex-column">
-                    <a class="nav-link active" href="#" data-section="dashboard">
-                        <i class="fas fa-tachometer-alt"></i> Dashboard
-                    </a>
-                    <a class="nav-link" href="#" data-section="companies">
-                        <i class="fas fa-building"></i> Companies
-                    </a>
-                    <a class="nav-link" href="#" data-section="profile">
-                        <i class="fas fa-user"></i> Profile
-                    </a>
-                    <a class="nav-link" href="#" data-section="resume">
-                        <i class="fas fa-file-alt"></i> Resume
-                    </a>
-                    <a class="nav-link" href="#" data-section="status">
-                        <i class="fas fa-chart-line"></i> Status
-                    </a>
-                    <a class="nav-link" href="#" data-section="calendar">
-                        <i class="fas fa-calendar"></i> Calendar
-                    </a>
-                    <a class="nav-link" href="#" data-section="notifications">
-                        <i class="fas fa-bell"></i> Notifications
-                    </a>
-                    <a class="nav-link" href="#" id="logout">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a>
-                </nav>
+        <nav class="sidebar" aria-label="Main menu">
+            <div class="sidebar-brand">
+                <img src="assets/Hiray logo.png" alt="">
+                <span>PMS</span>
+            </div>
+            <div class="nav flex-column">
+                <a class="nav-link" href="#dashboard" data-section="dashboard"><i class="fas fa-gauge-high" aria-hidden="true"></i> Dashboard</a>
+                <a class="nav-link" href="#companies" data-section="companies"><i class="fas fa-building" aria-hidden="true"></i> Companies</a>
+                <a class="nav-link" href="#profile" data-section="profile"><i class="fas fa-user" aria-hidden="true"></i> Profile</a>
+                <a class="nav-link" href="#resume" data-section="resume"><i class="fas fa-file-lines" aria-hidden="true"></i> Resume</a>
+                <a class="nav-link" href="#status" data-section="status"><i class="fas fa-chart-line" aria-hidden="true"></i> Status</a>
+                <a class="nav-link" href="#calendar" data-section="calendar"><i class="fas fa-calendar" aria-hidden="true"></i> Calendar</a>
+                <a class="nav-link" href="#notifications" data-section="notifications">
+                    <i class="fas fa-bell" aria-hidden="true"></i> Notifications
+                    <span class="nav-badge" id="unread-badge" hidden>0</span>
+                </a>
+                <a class="nav-link" href="#" id="logout"><i class="fas fa-right-from-bracket" aria-hidden="true"></i> Logout</a>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 id="section-title">Dashboard</h1>
+                <div id="current-status" class="status-badge status-unplaced"><i class="fas fa-circle" aria-hidden="true"></i> Unplaced</div>
             </div>
 
-            <!-- Main Content -->
-            <div class="main-content">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 id="section-title">Student Dashboard</h2>
-                    <div id="current-status" class="status-badge status-unplaced">
-                        <i class="fas fa-circle"></i> Unplaced
-                    </div>
-                </div>
-
-                <!-- Dashboard Section -->
-                <div id="dashboard-section" class="section">
-                    <div class="row">
-                        <!-- Quick Stats -->
-                        <div class="col-md-4 mb-4">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Placement Status</h5>
-                                    <div class="d-flex align-items-center">
-                                        <div id="dash-status-badge" class="status-badge status-unplaced me-3">
-                                            <i class="fas fa-circle"></i> Loading...
-                                        </div>
-                                        <div class="ms-auto">
-                                            <button class="btn btn-sm btn-outline-primary" onclick="document.querySelector('.nav-link[data-section=\'status\']').click()">
-                                                View Timeline
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="mt-3">
-                                        <small id="status-updated-time" class="text-muted">Last Updated: Loading...</small>
-                                    </div>
-                                    <div class="mt-2">
-                                        <div class="progress" style="height: 5px;">
-                                            <div class="progress-bar" id="status-progress-bar" role="progressbar"></div>
-                                        </div>
-                                    </div>
-                                </div>
+            <!-- Dashboard -->
+            <section id="dashboard-section" class="section" aria-labelledby="section-title">
+                <div class="row">
+                    <div class="col-lg-4 mb-4">
+                        <div class="card h-100 mb-0"><div class="card-body">
+                            <h2 class="card-title">Placement status</h2>
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <div id="dash-status-badge" class="status-badge status-unplaced"><i class="fas fa-circle" aria-hidden="true"></i> Unplaced</div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-goto="status">View timeline</button>
                             </div>
-                        </div>
-
-                        <!-- Applications Overview -->
-                        <div class="col-md-4 mb-4">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Applications</h5>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h3 id="app-total-count" class="mb-0">0</h3>
-                                            <small class="text-muted">Total Applications</small>
-                                        </div>
-                                        <div class="text-end">
-                                            <button class="btn btn-sm btn-outline-primary" onclick="document.querySelector('.nav-link[data-section=\'companies\']').click()">
-                                                View All
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="mt-3">
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <small id="app-pending-label" class="text-warning">
-                                                <i class="fas fa-clock"></i> Pending: 0
-                                            </small>
-                                            <small id="app-accepted-label" class="text-success">
-                                                <i class="fas fa-check-circle"></i> Accepted: 0
-                                            </small>
-                                            <small id="app-rejected-label" class="text-danger">
-                                                <i class="fas fa-times-circle"></i> Rejected: 0
-                                            </small>
-                                        </div>
-                                    </div>
-                                    <div class="mt-2">
-                                        <div class="progress" style="height: 5px;">
-                                            <div class="progress-bar bg-warning" id="pending-progress-bar"></div>
-                                            <div class="progress-bar bg-success" id="accepted-progress-bar"></div>
-                                            <div class="progress-bar bg-danger" id="rejected-progress-bar"></div>
-                                        </div>
-                                    </div>
-                                </div>
+                            <p class="mt-3 mb-2"><small id="status-updated-time" class="text-muted">Last updated: —</small></p>
+                            <div class="progress" style="height: 6px;" role="progressbar" aria-label="Placement progress" aria-valuemin="0" aria-valuemax="100">
+                                <div class="progress-bar" id="status-progress-bar"></div>
                             </div>
-                        </div>
-
-                        <!-- Profile Completion -->
-                        <div class="col-md-4 mb-4">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Profile Completion</h5>
-                                    <div class="progress mb-2" style="height: 10px;">
-                                        <div class="progress-bar" id="profile-progress-bar" role="progressbar"></div>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small id="profile-completion-pct" class="text-muted">0% Complete</small>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="document.querySelector('.nav-link[data-section=\'profile\']').click()">
-                                            Complete Profile
-                                        </button>
-                                    </div>
-                                    <div class="mt-3">
-                                        <ul class="list-unstyled mb-0">
-                                            <li class="mb-1">
-                                                <i id="check-skills" class="fas fa-times-circle text-danger me-2"></i>
-                                                Skills
-                                            </li>
-                                            <li class="mb-1">
-                                                <i id="check-education" class="fas fa-times-circle text-danger me-2"></i>
-                                                Education
-                                            </li>
-                                            <li class="mb-1">
-                                                <i id="check-projects" class="fas fa-times-circle text-danger me-2"></i>
-                                                Projects
-                                            </li>
-                                            <li class="mb-1">
-                                                <i id="check-resume" class="fas fa-times-circle text-danger me-2"></i>
-                                                Resume uploaded
-                                            </li>
-                                            <li>
-                                                <i id="check-approved" class="fas fa-times-circle text-danger me-2"></i>
-                                                Resume approved
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        </div></div>
                     </div>
 
-                    <!-- Recent Applications -->
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="card-title mb-0">Recent Applications</h5>
+                    <div class="col-lg-4 mb-4">
+                        <div class="card h-100 mb-0"><div class="card-body">
+                            <h2 class="card-title">Applications</h2>
+                            <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <button class="btn btn-sm btn-outline-primary me-2" onclick="document.querySelector('.nav-link[data-section=\'companies\']').click()">
-                                        View All
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="refreshApplications()">
-                                        <i class="fas fa-sync-alt"></i> Refresh
-                                    </button>
+                                    <div id="app-total-count" class="fs-2 fw-semibold lh-1">0</div>
+                                    <small class="text-muted">Total applications</small>
                                 </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-goto="companies">Browse jobs</button>
                             </div>
-                            <div id="recent-applications">
-                                <!-- Recent applications will be dynamically added here -->
+                            <div class="d-flex justify-content-between flex-wrap gap-1 mt-3">
+                                <small id="app-pending-label" class="text-warning-emphasis"></small>
+                                <small id="app-accepted-label" class="text-success"></small>
+                                <small id="app-rejected-label" class="text-danger"></small>
                             </div>
-                        </div>
+                            <div class="progress mt-2" style="height: 6px;" role="img" aria-label="Share of pending, accepted and rejected applications">
+                                <div class="progress-bar bg-warning" id="pending-progress-bar"></div>
+                                <div class="progress-bar bg-success" id="accepted-progress-bar"></div>
+                                <div class="progress-bar bg-danger" id="rejected-progress-bar"></div>
+                            </div>
+                        </div></div>
                     </div>
 
-                    <!-- Upcoming Events -->
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="card-title mb-0">Upcoming Events</h5>
-                                <div>
-                                    <button class="btn btn-sm btn-outline-primary me-2" onclick="document.querySelector('.nav-link[data-section=\'calendar\']').click()">
-                                        View Calendar
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="refreshEvents()">
-                                        <i class="fas fa-sync-alt"></i> Refresh
-                                    </button>
-                                </div>
+                    <div class="col-lg-4 mb-4">
+                        <div class="card h-100 mb-0"><div class="card-body">
+                            <h2 class="card-title">Profile completion</h2>
+                            <div class="progress mb-2" style="height: 10px;" role="progressbar" aria-label="Profile completion" aria-valuemin="0" aria-valuemax="100">
+                                <div class="progress-bar" id="profile-progress-bar"></div>
                             </div>
-                            <div id="upcoming-events">
-                                <!-- Upcoming events will be dynamically added here -->
+                            <div class="d-flex justify-content-between align-items-center gap-2">
+                                <small id="profile-completion-pct" class="text-muted">0% complete</small>
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-goto="profile">Edit profile</button>
                             </div>
-                        </div>
+                            <ul class="list-unstyled mt-3 mb-0">
+                                <li class="mb-1"><i id="check-skills" class="fas fa-circle-xmark text-danger me-2" aria-hidden="true"></i>Skills</li>
+                                <li class="mb-1"><i id="check-education" class="fas fa-circle-xmark text-danger me-2" aria-hidden="true"></i>Education</li>
+                                <li class="mb-1"><i id="check-projects" class="fas fa-circle-xmark text-danger me-2" aria-hidden="true"></i>Projects</li>
+                                <li class="mb-1"><i id="check-resume" class="fas fa-circle-xmark text-danger me-2" aria-hidden="true"></i>Resume uploaded</li>
+                                <li><i id="check-approved" class="fas fa-circle-xmark text-danger me-2" aria-hidden="true"></i>Resume approved</li>
+                            </ul>
+                        </div></div>
                     </div>
                 </div>
 
-                <!-- Profile Section -->
-                <div id="profile-section" class="section" style="display: none;">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Profile Information</h5>
-                            <form id="profile-form">
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Full Name</label>
-                                        <input type="text" class="form-control" id="profile-name">
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Email</label>
-                                        <input type="email" class="form-control" id="profile-email" readonly>
-                                    </div>
-                                </div>
-                                <!-- Course is read-only (set at registration) -->
-                                <div class="mb-3">
-                                    <label class="form-label">Course</label>
-                                    <input type="text" class="form-control" id="profile-course" readonly>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Skills</label>
-                                    <input type="text" class="form-control" id="profile-skills" placeholder="Enter skills separated by commas">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Education</label>
-                                    <textarea class="form-control" id="profile-education" rows="3"></textarea>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Projects</label>
-                                    <textarea class="form-control" id="profile-projects" rows="3"></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-primary">Save Profile</button>
-                            </form>
-                        </div>
+                <div class="card"><div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h2 class="card-title mb-0">Recommended for you</h2>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-goto="companies">All companies</button>
+                    </div>
+                    <p class="text-muted small mb-3">Jobs open to your course, ranked by how many of the skills they ask for you already have (from your skills and projects). Green skills you have; grey ones are still to learn.</p>
+                    <div id="recommended-list"></div>
+                </div></div>
+
+                <div class="card"><div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h2 class="card-title mb-0">Recent applications</h2>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-action="refresh-applications"><i class="fas fa-rotate" aria-hidden="true"></i> Refresh</button>
+                    </div>
+                    <div id="recent-applications"></div>
+                </div></div>
+
+                <div class="card"><div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h2 class="card-title mb-0">Upcoming events</h2>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-goto="calendar">Open calendar</button>
+                    </div>
+                    <div id="upcoming-events"></div>
+                </div></div>
+            </section>
+
+            <!-- Companies -->
+            <section id="companies-section" class="section" aria-labelledby="section-title" hidden>
+                <div class="filters-bar">
+                    <div>
+                        <label class="form-label" for="search-company">Search</label>
+                        <input type="search" class="form-control" id="search-company" placeholder="Company or city">
+                    </div>
+                    <div>
+                        <label class="form-label" for="filter-job-type">Job type</label>
+                        <select class="form-select" id="filter-job-type" data-options="jobTypes"><option value="">All job types</option></select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="sort-companies">Sort by</label>
+                        <select class="form-select" id="sort-companies">
+                            <option value="newest">Newest first</option>
+                            <option value="match">Best match</option>
+                        </select>
                     </div>
                 </div>
+                <div id="companies-list"></div>
+            </section>
 
-                <!-- Resume Section -->
-                <div id="resume-section" class="section" style="display: none;">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Upload Resume</h5>
-                            <form id="resume-form">
-                                <div class="mb-3">
-                                    <!-- PDF only (matches the backend) -->
-                                    <label class="form-label">Select Resume (PDF only)</label>
-                                    <input type="file" class="form-control" id="resume-file" accept=".pdf">
-                                </div>
-                                <button type="submit" class="btn btn-primary">Upload</button>
-                            </form>
-                            <div id="resume-status" class="mt-3"></div>
-                            <div class="resume-preview" id="resume-preview"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Status Section -->
-                <div id="status-section" class="section" style="display: none;">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Placement Status</h5>
-                            <div class="timeline" id="status-timeline">
-                                <!-- Status will be dynamically updated -->
+            <!-- Profile -->
+            <section id="profile-section" class="section" aria-labelledby="section-title" hidden>
+                <div class="card"><div class="card-body">
+                    <h2 class="card-title">Profile information</h2>
+                    <form id="profile-form">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="profile-name">Full name</label>
+                                <input type="text" class="form-control" id="profile-name" autocomplete="name" maxlength="100" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="profile-email">Email</label>
+                                <input type="email" class="form-control" id="profile-email" autocomplete="email" readonly>
                             </div>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="profile-course">Course</label>
+                            <input type="text" class="form-control" id="profile-course" readonly>
+                            <div class="form-text">Set when you registered.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="profile-skills">Skills</label>
+                            <input type="text" class="form-control" id="profile-skills" maxlength="500" placeholder="e.g. JavaScript, Node.js, MongoDB">
+                            <div class="form-text">Separate skills with commas. Required to apply, and used to recommend jobs.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="profile-education">Education</label>
+                            <textarea class="form-control" id="profile-education" rows="3" maxlength="1500"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="profile-projects">Projects</label>
+                            <textarea class="form-control" id="profile-projects" rows="3" maxlength="2500"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save profile</button>
+                    </form>
+                </div></div>
+            </section>
+
+            <!-- Resume -->
+            <section id="resume-section" class="section" aria-labelledby="section-title" hidden>
+                <div class="card"><div class="card-body">
+                    <h2 class="card-title">Upload resume</h2>
+                    <form id="resume-form" class="row g-2 align-items-end">
+                        <div class="col-md">
+                            <label class="form-label" for="resume-file">PDF file, up to 5 MB</label>
+                            <input type="file" class="form-control" id="resume-file" accept="application/pdf,.pdf" required>
+                        </div>
+                        <div class="col-md-auto">
+                            <button type="submit" class="btn btn-primary w-100" id="resume-submit">Upload</button>
+                        </div>
+                    </form>
+                    <p class="form-text mt-2 mb-0">After uploading we can read the PDF and suggest skills, education and projects for your profile. You choose what to keep.</p>
+                    <div id="resume-status" class="mt-3"></div>
+                    <div id="resume-preview"></div>
+                </div></div>
+            </section>
+
+            <!-- Status timeline -->
+            <section id="status-section" class="section" aria-labelledby="section-title" hidden>
+                <div class="card"><div class="card-body">
+                    <h2 class="card-title">Placement status history</h2>
+                    <div class="timeline" id="status-timeline"></div>
+                </div></div>
+            </section>
+
+            <!-- Calendar -->
+            <section id="calendar-section" class="section" aria-labelledby="section-title" hidden>
+                <div class="card"><div class="card-body">
+                    <h2 class="card-title">Events</h2>
+                    <div id="calendar"></div>
+                </div></div>
+            </section>
+
+            <!-- Notifications -->
+            <section id="notifications-section" class="section" aria-labelledby="section-title" hidden>
+                <div class="card"><div class="card-body">
+                    <h2 class="card-title">Notifications</h2>
+                    <div id="notifications-list"></div>
+                </div></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Company / event details -->
+    <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="detailsModalTitle"></h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="detailsModalBody"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fill the profile from the resume -->
+    <div class="modal fade" id="scanModal" tabindex="-1" aria-labelledby="scanModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="scanModalTitle">We found this in your resume</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Tick what you want to add to your profile and edit the text if needed. Nothing is saved until you press <strong>Add to my profile</strong>.</p>
+                    <fieldset class="mb-4" id="scan-skills-block">
+                        <legend class="fs-6 fw-semibold">Skills</legend>
+                        <div class="d-flex flex-wrap gap-2" id="scan-skills"></div>
+                    </fieldset>
+                    <div class="mb-4" id="scan-education-block">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="scan-education-use">
+                            <label class="form-check-label fw-semibold" for="scan-education-use">Education <span class="fw-normal text-muted small" id="scan-education-note"></span></label>
+                        </div>
+                        <label class="visually-hidden" for="scan-education">Education text from your resume</label>
+                        <textarea class="form-control mt-2" id="scan-education" rows="3" maxlength="1500"></textarea>
+                    </div>
+                    <div class="mb-2" id="scan-projects-block">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="scan-projects-use">
+                            <label class="form-check-label fw-semibold" for="scan-projects-use">Projects <span class="fw-normal text-muted small" id="scan-projects-note"></span></label>
+                        </div>
+                        <label class="visually-hidden" for="scan-projects">Projects text from your resume</label>
+                        <textarea class="form-control mt-2" id="scan-projects" rows="4" maxlength="2500"></textarea>
                     </div>
                 </div>
-
-                <!-- Companies Section -->
-                <div id="companies-section" class="section" style="display: none;">
-                    <div class="company-filters mb-4">
-                        <div class="filter-group">
-                            <input type="text" class="form-control" id="search-company" placeholder="Search companies...">
-                            <select class="form-select" id="filter-job-type">
-                                <option value="">All Job Types</option>
-                                <option value="Full Time">Full Time</option>
-                                <option value="Part Time">Part Time</option>
-                                <option value="Internship">Internship</option>
-                            </select>
-                            <select class="form-select" id="filter-branch">
-                                <option value="">All Branches</option>
-                                <option value="MCA">MCA</option>
-                                <option value="MBA">MBA</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div id="companies-list">
-                        <!-- Companies will be dynamically added here -->
-                    </div>
-                </div>
-
-                <!-- Notifications Section -->
-                <div id="notifications-section" class="section" style="display: none;">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Notifications</h5>
-                            <div id="notifications-list">
-                                <!-- Notifications will be dynamically added -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Calendar Section -->
-                <div id="calendar-section" class="section" style="display: none;">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Upcoming Events</h5>
-                            <div id="calendar">
-                                <!-- Calendar will be dynamically generated -->
-                            </div>
-                        </div>
-                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Not now</button>
+                    <button type="button" class="btn btn-primary" id="scan-apply">Add to my profile</button>
                 </div>
             </div>
+        </div>
     </div>
 
-    <!-- Loading Overlay -->
-    <div class="loading" id="loadingOverlay">
-        <div class="loading-spinner"></div>
-    </div>
-
-    <!-- Notification Container -->
-    <div id="notificationContainer"></div>
+    <div class="loading" id="loadingOverlay" role="status" aria-label="Loading"><div class="loading-spinner"></div></div>
 
     <footer class="footer">
         <div class="footer-content">
-            <div class="footer-links">
-                <a href="#">About Us</a>
-                <a href="#">Contact</a>
-                <a href="#">Privacy Policy</a>
-                <a href="#">Terms of Service</a>
-            </div>
-            <div class="footer-social">
-                <a href="#"><i class="fab fa-facebook"></i></a>
-                <a href="#"><i class="fab fa-twitter"></i></a>
-                <a href="#"><i class="fab fa-linkedin"></i></a>
-                <a href="#"><i class="fab fa-instagram"></i></a>
-            </div>
-            <div>
-                &copy; 2024 Placement Management System. All rights reserved.
-            </div>
+            <span>Placement Management System</span>
+            <span>Dr. B.V. Hiray College of Management &amp; Research Center, Malegaon</span>
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
     <script src="js/utils.js"></script>
+    <script src="js/dashboard.js"></script>
     <script src="js/student-dashboard.js"></script>
 </body>
 </html>

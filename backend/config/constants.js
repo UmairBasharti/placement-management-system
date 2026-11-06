@@ -1,5 +1,6 @@
 // Single source of truth for values used by validation and schemas.
-// (Keep in sync with the <select>/checkbox options in the frontend until they are rendered from the API.)
+// The frontend reads these from GET /api/public/meta, so this file is the only place to change them.
 module.exports = {
-    BRANCHES: ['MCA', 'MBA']
+    BRANCHES: ['MCA', 'MBA'],
+    JOB_TYPES: ['Full Time', 'Part Time', 'Internship']
 };

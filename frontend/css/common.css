@@ -1,10 +1,5 @@
-/* ═══════════════════════════════════════════════════════════════
-   COMMON STYLES — shared across all pages (home, login, dashboards)
-   ═══════════════════════════════════════════════════════════════ */
+/* Base styles shared by every page: design tokens, reset, footer, toasts, loading overlay, status badges. */
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
-
-/* ── CSS Variables (Design Tokens) ──────────────────────────── */
 :root {
     --primary-color: #bd0745;
     --secondary-color: #8a0532;
@@ -13,12 +8,10 @@
     --text-muted: #64748b;
     --light-bg: #f8fafc;
     --white: #ffffff;
-    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05),
-                   0 2px 4px -2px rgba(0, 0, 0, 0.025); /* Softer, eye-soothing shadow */
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.025);
     --transition: all 0.3s ease;
 }
 
-/* ── Reset & Base ───────────────────────────────────────────── */
 *, *::before, *::after {
     margin: 0;
     padding: 0;
@@ -30,7 +23,6 @@ body {
     color: var(--text-color);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -43,7 +35,24 @@ img {
     height: auto;
 }
 
-/* ── Scrollbar ──────────────────────────────────────────────── */
+/* Visible keyboard focus everywhere */
+:focus-visible {
+    outline: 3px solid rgba(189, 7, 69, 0.55);
+    outline-offset: 2px;
+}
+
+.visually-hidden {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 ::-webkit-scrollbar {
     width: 8px;
 }
@@ -57,198 +66,115 @@ img {
     border-radius: 10px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(189, 7, 69, 0.7);
-}
-
-/* ── Footer ─────────────────────────────────────────────────── */
+/* Footer */
 .footer {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    color: white;
     padding: 1rem;
     text-align: center;
-    font-size: 0.9rem;
-    z-index: 1000;
-    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1);
+    font-size: 0.85rem;
+    color: #fff;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
 }
 
 .footer-content {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 1rem;
 }
 
-.footer-links {
-    display: flex;
-    gap: 1.5rem;
+.footer a {
+    color: #fff;
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
-.footer-links a {
-    color: white;
-    text-decoration: none;
-    transition: var(--transition);
-    font-size: 0.85rem;
+@media (max-width: 768px) {
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+    }
 }
 
-.footer-links a:hover {
-    color: rgba(255, 255, 255, 0.8);
-    transform: translateY(-2px);
-}
-
-.footer-social {
-    display: flex;
-    gap: 1rem;
-}
-
-.footer-social a {
-    color: white;
-    font-size: 1.2rem;
-    transition: var(--transition);
-}
-
-.footer-social a:hover {
-    transform: translateY(-3px);
-    color: rgba(255, 255, 255, 0.8);
-}
-
-/* ── Notifications / Alerts ─────────────────────────────────── */
-.notification {
+/* Toasts (see showNotification in dashboard.js) */
+.toast-stack {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 25px;
-    border-radius: 8px;
-    background: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    top: 1rem;
+    right: 1rem;
     z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: min(350px, calc(100vw - 2rem));
+}
+
+.notification {
+    padding: 0.85rem 1.25rem;
+    border-left: 4px solid #9ca3af;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     transform: translateX(120%);
     transition: transform 0.3s ease;
-    max-width: 350px;
 }
 
-.notification.show {
-    transform: translateX(0);
-}
+.notification.show { transform: translateX(0); }
+.notification.success { border-left-color: #2e7d32; }
+.notification.error { border-left-color: #d32f2f; }
+.notification.warning { border-left-color: #ed8b00; }
 
-.notification.success {
-    border-left: 4px solid #4CAF50;
-}
-
-.notification.error {
-    border-left: 4px solid #f44336;
-}
-
-.notification.warning {
-    border-left: 4px solid #ff9800;
-}
-
-/* ── Loading Overlay ────────────────────────────────────────── */
+/* Full-screen loading overlay */
 .loading {
     display: none;
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.9);
+    inset: 0;
     z-index: 9999;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.85);
 }
 
 .loading-spinner {
     width: 50px;
     height: 50px;
     border: 5px solid #f3f3f3;
-    border-top: 5px solid var(--primary-color);
+    border-top-color: var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-    0%   { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    to { transform: rotate(360deg); }
 }
 
-/* ── Status Badges (shared by student + admin) ──────────────── */
+/* Status badges: placement status (student + admin) and application status */
 .status-badge {
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    transition: var(--transition);
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
 }
 
-.status-badge:hover {
-    transform: scale(1.05);
-}
+.status-unplaced { color: #fff; background-color: #dc3545; }
+.status-under-review { color: #1f2937; background-color: #ffd93d; }
+.status-interview-scheduled { color: #fff; background-color: var(--primary-color); }
+.status-placed { color: #fff; background-color: #16a34a; }
 
-.status-unplaced {
-    background-color: #ff6b6b;
-    color: white;
-}
+.status-pending { color: #b45309; }
+.status-accepted { color: #15803d; }
+.status-rejected { color: #b91c1c; }
 
-.status-review,
-.status-under-review {
-    background-color: #ffd93d;
-    color: black;
-}
-
-.status-interview,
-.status-interview-scheduled {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-.status-placed {
-    background-color: #16a34a;
-    color: white;
-}
-
-.status-pending { color: #ff9800; }
-.status-accepted { color: #4caf50; }
-.status-rejected { color: #f44336; }
-
-/* ── Utilities ──────────────────────────────────────────────── */
-.table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin-bottom: 1rem;
-    width: 100%;
-}
-
-
-/* ── Responsive Footer ──────────────────────────────────────── */
-@media (max-width: 768px) {
-    .footer-content {
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .footer-links {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 0.75rem;
-    }
-
-    .footer-social {
-        justify-content: center;
-    }
-}
-
-@media (max-width: 480px) {
-    .footer {
-        font-size: 0.8rem;
-        padding: 0.75rem;
-    }
-
-    .footer-links a {
-        font-size: 0.75rem;
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }

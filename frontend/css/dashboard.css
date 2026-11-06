@@ -1,0 +1,436 @@
+/* Styles shared by the student and admin dashboards (on top of Bootstrap and common.css). */
+
+:root {
+    --sidebar-width: 270px;
+    --primary-rgb: 189, 7, 69;
+}
+
+body {
+    background-color: var(--light-bg);
+}
+
+/* ── Bootstrap re-themed to the college crimson ───────────────────────────── */
+.btn-primary {
+    --bs-btn-bg: var(--primary-color);
+    --bs-btn-border-color: var(--primary-color);
+    --bs-btn-hover-bg: var(--secondary-color);
+    --bs-btn-hover-border-color: var(--secondary-color);
+    --bs-btn-active-bg: var(--secondary-color);
+    --bs-btn-active-border-color: var(--secondary-color);
+    --bs-btn-disabled-bg: var(--primary-color);
+    --bs-btn-disabled-border-color: var(--primary-color);
+    --bs-btn-focus-shadow-rgb: var(--primary-rgb);
+    font-weight: 600;
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--primary-color);
+    --bs-btn-border-color: var(--primary-color);
+    --bs-btn-hover-bg: var(--primary-color);
+    --bs-btn-hover-border-color: var(--primary-color);
+    --bs-btn-active-bg: var(--secondary-color);
+    --bs-btn-active-border-color: var(--secondary-color);
+    --bs-btn-disabled-color: var(--primary-color);
+    --bs-btn-disabled-border-color: var(--primary-color);
+    --bs-btn-focus-shadow-rgb: var(--primary-rgb);
+}
+
+.progress {
+    --bs-progress-bar-bg: var(--primary-color);
+    background-color: #eceff3;
+}
+
+.form-control,
+.form-select {
+    border-radius: 8px;
+    border: 1px solid #d5dbe3;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.15);
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.form-check-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.15);
+}
+
+.form-label {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+.app-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    width: var(--sidebar-width);
+    padding: 1.5rem 1rem;
+    overflow-y: auto;
+    color: #fff;
+    background: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0.5rem 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.sidebar-brand img {
+    width: 38px;
+    height: 38px;
+    padding: 2px;
+    border-radius: 50%;
+    background: #fff;
+    object-fit: contain;
+}
+
+.sidebar .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 2px 0;
+    padding: 0.7rem 1rem;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.82);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.sidebar .nav-link i {
+    width: 1.25rem;
+    text-align: center;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.nav-badge {
+    margin-left: auto;
+    min-width: 1.4rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--primary-color);
+    background: #fff;
+}
+
+.main-content {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-left: var(--sidebar-width);
+    padding: 2rem;
+}
+
+/* Bootstrap gives headings overflow-wrap:break-word, which does not let flex items shrink;
+   "anywhere" does, so a long unbroken name or URL wraps instead of widening the page.
+   Tables are left out on purpose: they scroll sideways inside .table-responsive. */
+.main-content :is(h1, h2, h3, h4, h5, h6, p, small, span, div, label, li) {
+    overflow-wrap: anywhere;
+}
+
+.page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 600;
+}
+
+.footer {
+    margin-left: var(--sidebar-width);
+}
+
+/* Top bar with the menu button: phones and tablets only */
+.topbar {
+    display: none;
+}
+
+.sidebar-overlay {
+    display: none;
+}
+
+/* ── Cards, tiles ─────────────────────────────────────────────────────────── */
+.card {
+    margin-bottom: 1.5rem;
+    border: none;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: var(--card-shadow);
+}
+
+.card-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.empty-state {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+/* ── Company cards (student list, admin list, recommendations) ────────────── */
+.company-card {
+    margin-bottom: 1rem;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid #e5e8ec;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+}
+
+.company-card h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.company-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    color: #5b6572;
+}
+
+.company-meta i {
+    margin-right: 0.35rem;
+    color: #8a93a0;
+}
+
+.company-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+}
+
+.company-tag {
+    padding: 0.2rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    color: #5b6572;
+    background: #f0f2f5;
+}
+
+.company-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.action-btn {
+    padding: 0.45rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #fff;
+    cursor: pointer;
+}
+
+.action-btn:disabled {
+    cursor: default;
+}
+
+.action-btn:not(:disabled):hover {
+    filter: brightness(0.92);
+}
+
+.view-btn { background: #6f42c1; }
+.apply-btn { background: var(--primary-color); }
+.edit-btn { background: #1976d2; }
+.delete-btn,
+.reject-btn { background: #d32f2f; }
+.approve-btn { background: #2e7d32; }
+.action-btn.is-pending { background: #fff3e0; color: #b45309; }
+
+.match-badge {
+    flex-shrink: 0;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: #fff;
+    background: #2e7d32;
+}
+
+.match-badge.is-medium { background: #b45309; }
+.match-badge.is-low { background: #6b7280; }
+
+/* Skill chips: matched = green, missing = grey */
+.skill-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: #374151;
+    background: #eef0f3;
+}
+
+.skill-chip.matched { color: #166534; background: #dcfce7; }
+.skill-chip.missing { color: #6b7280; background: #f3f4f6; }
+
+/* ── Calendar events ──────────────────────────────────────────────────────── */
+.calendar-event {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #e5e8ec;
+    border-left-width: 4px;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: var(--card-shadow);
+}
+
+.calendar-event.upcoming { border-left-color: var(--primary-color); }
+.calendar-event.past { border-left-color: #9aa1ab; opacity: 0.75; }
+
+.event-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 0.5rem;
+}
+
+/* ── Detail modals ────────────────────────────────────────────────────────── */
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem 1.5rem;
+}
+
+.detail-item .label {
+    display: block;
+    margin-bottom: 0.15rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.detail-item .value {
+    font-weight: 500;
+}
+
+/* ── Phones and tablets ───────────────────────────────────────────────────── */
+@media (max-width: 992px) {
+    .sidebar {
+        left: -100%;
+        width: 80%;
+        max-width: 300px;
+        height: 100vh;
+        height: 100dvh;
+        transition: left 0.3s ease;
+    }
+
+    .sidebar.active {
+        left: 0;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 1rem;
+    }
+
+    .footer {
+        margin-left: 0;
+    }
+
+    .topbar {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        position: sticky;
+        top: 0;
+        z-index: 900;
+        height: 56px;
+        padding: 0 1rem;
+        background: #fff;
+        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .topbar-title {
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .mobile-menu-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: 50%;
+        color: #fff;
+        background: var(--primary-color);
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .main-content {
+        padding: 0.75rem;
+    }
+
+    .company-card {
+        padding: 1rem;
+    }
+
+    .event-actions {
+        flex-direction: column;
+    }
+}
+
+/* On devices with a mouse the action buttons get a hover cue; touch devices skip it */
+@media (hover: none) {
+    .action-btn:not(:disabled):hover {
+        filter: none;
+    }
+}
