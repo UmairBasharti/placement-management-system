@@ -21,7 +21,7 @@ Built as a semester project for **Dr. B.V. Hiray College of Management & Researc
 </p>
 
 ## Contents
-[What it does](#what-it-does) · [Screenshots](#screenshots) · [Tech stack](#tech-stack) · [Getting started](#getting-started) · [Configuration](#configuration) · [How the matching works](#how-the-matching-and-resume-scan-work) · [Project structure](#project-structure) · [API](#api) · [Security](#security) · [Testing](#testing) · [Troubleshooting](#troubleshooting) · [Limitations](#limitations) · [Documentation](#documentation)
+[What it does](#what-it-does) · [Project story](docs/PROJECT_STORY.md) · [Screenshots](#screenshots) · [Tech stack](#tech-stack) · [Getting started](#getting-started) · [Configuration](#configuration) · [How the matching works](#how-the-matching-and-resume-scan-work) · [Project structure](#project-structure) · [API](#api) · [Security](#security) · [Testing](#testing) · [Troubleshooting](#troubleshooting) · [Limitations](#limitations) · [Documentation](#documentation)
 
 ## What it does
 
@@ -262,6 +262,7 @@ The end-to-end behaviour (APIs and the real pages in a browser) was verified by 
 | [`docs/USER_MANUAL.md`](docs/USER_MANUAL.md) | Guides for students and the placement cell |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Production checklist and hosting notes |
 | [`docs/AUDIT.md`](docs/AUDIT.md) | The code review that shaped this version: what was found, what was fixed |
+| [`docs/PROJECT_STORY.md`](docs/PROJECT_STORY.md) | Why it was built, the main decisions, the difficulties and what I learned |
 
 ## License
 
