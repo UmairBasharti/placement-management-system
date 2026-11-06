@@ -1,9 +1,10 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const { rateLimit } = require('express-rate-limit');
 const dotenv = require('dotenv');
 const path = require('path');
-const fs = require('fs');
 
 dotenv.config();
 
@@ -16,53 +17,120 @@ if (process.env.DNS_SERVERS) {
 require('./config/validateEnv')(['MONGODB_URI', 'JWT_SECRET']);
 
 const app = express();
+const FRONTEND_DIR = path.join(__dirname, '../frontend');
 
-// Ensure uploads directory exists at startup
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+// Behind a reverse proxy (Render, Railway, nginx…) set TRUST_PROXY=1 so rate limiting sees real client IPs
+if (process.env.TRUST_PROXY) {
+    app.set('trust proxy', Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY);
 }
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// ── Security headers ──────────────────────────────────────────────────────────
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
+            // Some buttons still use inline onclick="" handlers (they only carry server-generated ids).
+            // Remove this line once those are replaced by event listeners.
+            scriptSrcAttr: ["'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com',
+                       'https://unpkg.com', 'https://fonts.googleapis.com'],
+            fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://unpkg.com', 'https://fonts.gstatic.com', 'data:'],
+            imgSrc: ["'self'", 'data:', 'blob:'],
+            connectSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"],
+            frameAncestors: ["'self'"],
+            upgradeInsecureRequests: null   // would break plain-http local development (notably in Safari)
+        }
+    },
+    // allow-popups: the "View resume" tab is opened with window.open()
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }
+}));
+
+// The frontend is served by this same server, so cross-origin API access is OFF unless
+// CLIENT_ORIGIN (comma-separated list) is set — e.g. when hosting the frontend elsewhere.
+app.use(cors({
+    origin: process.env.CLIENT_ORIGIN ? process.env.CLIENT_ORIGIN.split(',').map(s => s.trim()) : false
+}));
+
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
 // NOTE: uploads/ is deliberately NOT served statically — resumes are personal data and are
 // only available through the authenticated /resume routes (student own file, admin any).
 
-// Serve frontend static files from the frontend/ directory
-app.use(express.static(path.join(__dirname, '../frontend')));
+// Frontend static files (index.html is served for "/")
+app.use(express.static(FRONTEND_DIR));
 
-// Routes
-const authRoutes        = require('./routes/auth.routes');
-const studentRoutes     = require('./routes/student.routes');
-const companyRoutes     = require('./routes/company.routes');
-const applicationRoutes = require('./routes/application.routes');
-const adminRoutes       = require('./routes/admin.routes');
-const eventRoutes       = require('./routes/event.routes');
+// ── Rate limiting (in-memory; fine for a single instance) ─────────────────────
+const limiter = (windowMs, limit, message, extra = {}) => rateLimit({
+    windowMs, limit, standardHeaders: 'draft-7', legacyHeaders: false,
+    message: { success: false, message }, ...extra
+});
+app.use('/api', limiter(15 * 60 * 1000, 600, 'Too many requests. Please slow down.'));
+// Login: only FAILED attempts count, so normal use is never throttled but brute force is
+app.use('/api/auth/login', limiter(15 * 60 * 1000, 10, 'Too many failed login attempts. Try again in 15 minutes.', { skipSuccessfulRequests: true }));
+app.use('/api/auth/register', limiter(60 * 60 * 1000, 20, 'Too many registrations from this address. Try again later.'));
 
-app.use('/api/auth',         authRoutes);
-app.use('/api/students',     studentRoutes);
-app.use('/api/companies',    companyRoutes);
-app.use('/api/applications', applicationRoutes);
-app.use('/api/admin',        adminRoutes);
-app.use('/api/events',       eventRoutes);
+// ── Routes ────────────────────────────────────────────────────────────────────
+app.get('/api/health', (req, res) => {
+    const dbUp = mongoose.connection.readyState === 1;
+    res.status(dbUp ? 200 : 503).json({ status: dbUp ? 'ok' : 'degraded', database: dbUp ? 'connected' : 'disconnected', uptime: Math.round(process.uptime()) });
+});
 
-// MongoDB Connection — Mongoose 7+ does not need deprecated options
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('✅ Connected to MongoDB'))
-    .catch(err => console.error('❌ MongoDB connection error:', err));
+app.use('/api/auth',         require('./routes/auth.routes'));
+app.use('/api/students',     require('./routes/student.routes'));
+app.use('/api/companies',    require('./routes/company.routes'));
+app.use('/api/applications', require('./routes/application.routes'));
+app.use('/api/admin',        require('./routes/admin.routes'));
+app.use('/api/events',       require('./routes/event.routes'));
 
-// Fix #9: Catch-all — serve index.html for any non-API route (SPA fallback)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+// Unknown API routes get JSON, never the home page
+app.use('/api', (req, res) => {
+    res.status(404).json({ success: false, message: 'API route not found' });
+});
+
+// Everything else that isn't a real file is a genuine 404 (not the home page)
+app.use((req, res) => {
+    if (req.method === 'GET' && req.accepts('html')) {
+        return res.status(404).sendFile(path.join(FRONTEND_DIR, '404.html'));
+    }
+    res.status(404).json({ success: false, message: 'Not found' });
 });
 
 // Central error handler (maps known errors to clean responses; never leaks internals)
 app.use(require('./middleware/error.middleware'));
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+// ── Startup: connect to the database FIRST, exit if it fails ──────────────────
+async function start() {
+    try {
+        await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 15000 });
+        console.log('✅ Connected to MongoDB');
+    } catch (err) {
+        console.error('❌ MongoDB connection failed:', err.message);
+        console.error('   Check MONGODB_URI, your Atlas IP access list and — on some networks — DNS_SERVERS in backend/.env');
+        process.exit(1);
+    }
+
+    const PORT = process.env.PORT || 5000;
+    const server = app.listen(PORT, () => {
+        console.log(`🚀 Server running on http://localhost:${PORT}`);
+    });
+
+    // Graceful shutdown: stop accepting requests, close the DB, then exit
+    const shutdown = (signal) => {
+        console.log(`\n${signal} received — shutting down`);
+        server.close(async () => {
+            await mongoose.connection.close();
+            process.exit(0);
+        });
+        setTimeout(() => process.exit(1), 10000).unref();   // force-exit if connections hang
+    };
+    ['SIGINT', 'SIGTERM'].forEach(sig => process.on(sig, () => shutdown(sig)));
+}
+
+if (require.main === module) start();
+
+module.exports = app;   // exported so tests (Supertest) can use the app without listening
