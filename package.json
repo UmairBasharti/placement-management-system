@@ -2,7 +2,24 @@
   "name": "placement-management-system",
   "version": "1.0.0",
   "private": true,
-  "description": "Placement Management System for Dr. B.V. Hiray College — repo-level tooling (the app itself lives in backend/ and frontend/)",
+  "description": "Placement Management System for Dr. B.V. Hiray College. Repository-level tooling; the app lives in backend/ and frontend/.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UmairBasharti/placement-management-system.git"
+  },
+  "bugs": {
+    "url": "https://github.com/UmairBasharti/placement-management-system/issues"
+  },
+  "homepage": "https://github.com/UmairBasharti/placement-management-system#readme",
+  "keywords": [
+    "placement",
+    "college",
+    "express",
+    "mongodb",
+    "gridfs",
+    "jwt",
+    "full-stack"
+  ],
   "scripts": {
     "lint": "eslint .",
     "test": "npm test --prefix backend",
