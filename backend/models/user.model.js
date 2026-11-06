@@ -12,7 +12,9 @@ const userSchema = new mongoose.Schema({
         required: [true, 'Email is required'],
         unique: true,
         lowercase: true,
-        match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Invalid email format']
+        // Deliberately permissive (the route validates with express-validator's isEmail):
+        // allows +tags, any TLD length (.info, .online …) and unusual-but-valid local parts
+        match: [/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, 'Invalid email format']
     },
     password: {
         type: String,

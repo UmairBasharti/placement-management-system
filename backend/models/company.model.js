@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { BRANCHES } = require('../config/constants');
 
 const companySchema = new mongoose.Schema({
     name: {
@@ -22,7 +23,8 @@ const companySchema = new mongoose.Schema({
     // Which branches are eligible — e.g. ['MCA', 'MBA']
     branches: [{
         type: String,
-        trim: true
+        trim: true,
+        enum: { values: BRANCHES, message: `Branch must be one of: ${BRANCHES.join(', ')}` }
     }],
     requirements: {
         type: String,
