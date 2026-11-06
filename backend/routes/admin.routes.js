@@ -15,7 +15,7 @@ router.use(authorize('admin'));
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 
 // GET /api/admin/stats — numbers for the dashboard cards + charts
-router.get('/stats', async (req, res) => {
+router.get('/stats', async (req, res, next) => {
     try {
         const [totalStudents, placedStudents, totalCompanies, totalApplications] = await Promise.all([
             Student.countDocuments(),
@@ -47,24 +47,24 @@ router.get('/stats', async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // GET /api/admin/activities — last 10 activity log entries
-router.get('/activities', async (req, res) => {
+router.get('/activities', async (req, res, next) => {
     try {
         const activities = await Activity.find().sort({ timestamp: -1 }).limit(10);
         res.json({ success: true, data: activities });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // ─── STUDENTS ─────────────────────────────────────────────────────────────────
 
 // GET /api/admin/students — all students with their user + profile data merged
-router.get('/students', async (req, res) => {
+router.get('/students', async (req, res, next) => {
     try {
         const students = await Student.find().populate('user', 'name email branch');
 
@@ -84,12 +84,12 @@ router.get('/students', async (req, res) => {
 
         res.json({ success: true, data: formatted });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // PUT /api/admin/students/:id/status — update a student's placement status
-router.put('/students/:id/status', async (req, res) => {
+router.put('/students/:id/status', async (req, res, next) => {
     try {
         const { status } = req.body;
         const allowed = ['Unplaced', 'Under Review', 'Interview Scheduled', 'Placed'];
@@ -121,14 +121,14 @@ router.put('/students/:id/status', async (req, res) => {
 
         res.json({ success: true, message: 'Student status updated' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // ─── RESUMES ──────────────────────────────────────────────────────────────────
 
 // GET /api/admin/resumes — all students who have uploaded a resume
-router.get('/resumes', async (req, res) => {
+router.get('/resumes', async (req, res, next) => {
     try {
         const students = await Student.find({ 'resume.path': { $ne: null } })
             .populate('user', 'name email branch');
@@ -143,7 +143,7 @@ router.get('/resumes', async (req, res) => {
 
         res.json({ success: true, data: formatted });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
@@ -161,7 +161,7 @@ router.get('/students/:id/resume', async (req, res, next) => {
 });
 
 // PUT /api/admin/resumes/:id/approve
-router.put('/resumes/:id/approve', async (req, res) => {
+router.put('/resumes/:id/approve', async (req, res, next) => {
     try {
         const student = await Student.findById(req.params.id).populate('user', 'name');
         if (!student) {
@@ -182,12 +182,12 @@ router.put('/resumes/:id/approve', async (req, res) => {
 
         res.json({ success: true, message: 'Resume approved' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // PUT /api/admin/resumes/:id/reject
-router.put('/resumes/:id/reject', async (req, res) => {
+router.put('/resumes/:id/reject', async (req, res, next) => {
     try {
         const student = await Student.findById(req.params.id).populate('user', 'name');
         if (!student) {
@@ -208,14 +208,14 @@ router.put('/resumes/:id/reject', async (req, res) => {
 
         res.json({ success: true, message: 'Resume rejected' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // ─── APPLICATIONS ─────────────────────────────────────────────────────────────
 
 // GET /api/admin/applications — all applications with student + company info
-router.get('/applications', async (req, res) => {
+router.get('/applications', async (req, res, next) => {
     try {
         const applications = await Application.find()
             .populate('company', 'name location jobType package')
@@ -223,7 +223,7 @@ router.get('/applications', async (req, res) => {
 
         res.json({ success: true, data: applications });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 

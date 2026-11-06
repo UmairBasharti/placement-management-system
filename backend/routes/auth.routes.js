@@ -19,7 +19,7 @@ router.post('/register', [
     body('email').isEmail().withMessage('Valid email is required'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
     body('branch').notEmpty().withMessage('Branch is required')
-], async (req, res) => {
+], async (req, res, next) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -49,7 +49,7 @@ router.post('/register', [
         });
 
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Registration failed', error: error.message });
+        next(error);
     }
 });
 
@@ -57,7 +57,7 @@ router.post('/register', [
 router.post('/login', [
     body('email').isEmail().withMessage('Valid email is required'),
     body('password').notEmpty().withMessage('Password is required')
-], async (req, res) => {
+], async (req, res, next) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -81,12 +81,12 @@ router.post('/login', [
         });
 
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Login failed', error: error.message });
+        next(error);
     }
 });
 
 // GET /api/auth/me — verify token and return current user
-router.get('/me', protect, async (req, res) => {
+router.get('/me', protect, async (req, res, next) => {
     res.json({
         success: true,
         user: {

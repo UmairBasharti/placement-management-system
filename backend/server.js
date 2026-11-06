@@ -59,15 +59,8 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-// Global error handling middleware
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({
-        success: false,
-        message: 'Internal Server Error',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
-});
+// Central error handler (maps known errors to clean responses; never leaks internals)
+app.use(require('./middleware/error.middleware'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

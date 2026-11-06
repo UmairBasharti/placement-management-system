@@ -7,7 +7,7 @@ const { protect, authorize } = require('../middleware/auth.middleware');
 
 // GET /api/companies — list all active companies
 // Both students and admins can access; students see only companies matching their branch
-router.get('/', protect, async (req, res) => {
+router.get('/', protect, async (req, res, next) => {
     try {
         let query = { status: 'active' };
 
@@ -21,12 +21,12 @@ router.get('/', protect, async (req, res) => {
 
         res.json({ success: true, data: await finder });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // GET /api/companies/:id — single company with application count
-router.get('/:id', protect, async (req, res) => {
+router.get('/:id', protect, async (req, res, next) => {
     try {
         // Students may only open active companies that match their branch — and never see admin notes
         if (req.user.role === 'student') {
@@ -55,12 +55,12 @@ router.get('/:id', protect, async (req, res) => {
 
         res.json({ success: true, data: { ...company.toObject(), stats } });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // POST /api/companies — admin only: add new company
-router.post('/', protect, authorize('admin'), async (req, res) => {
+router.post('/', protect, authorize('admin'), async (req, res, next) => {
     try {
         const { name, description, location, jobType, branches, requirements, package: pkg } = req.body;
 
@@ -79,12 +79,12 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
 
         res.status(201).json({ success: true, data: company, message: 'Company added successfully' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // PUT /api/companies/:id — admin only: update company
-router.put('/:id', protect, authorize('admin'), async (req, res) => {
+router.put('/:id', protect, authorize('admin'), async (req, res, next) => {
     try {
         const { branches, package: pkg, ...rest } = req.body;
 
@@ -109,12 +109,12 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
 
         res.json({ success: true, data: company, message: 'Company updated successfully' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // DELETE /api/companies/:id — admin only: permanently delete + remove applications
-router.delete('/:id', protect, authorize('admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
     try {
         const company = await Company.findById(req.params.id);
         if (!company) {
@@ -134,12 +134,12 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
 
         res.json({ success: true, message: 'Company and its applications deleted successfully' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // POST /api/companies/:id/notes — admin: add a note to a company
-router.post('/:id/notes', protect, authorize('admin'), async (req, res) => {
+router.post('/:id/notes', protect, authorize('admin'), async (req, res, next) => {
     try {
         const { text } = req.body;
         if (!text || !text.trim()) {
@@ -158,7 +158,7 @@ router.post('/:id/notes', protect, authorize('admin'), async (req, res) => {
 
         res.json({ success: true, data: company.notes, message: 'Note added' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 

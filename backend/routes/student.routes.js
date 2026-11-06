@@ -13,7 +13,7 @@ router.use(protect);
 router.use(authorize('student'));
 
 // GET /api/students/me — get full profile (user + student doc merged)
-router.get('/me', async (req, res) => {
+router.get('/me', async (req, res, next) => {
     try {
         const student = await Student.findOne({ user: req.user._id });
         if (!student) {
@@ -39,12 +39,12 @@ router.get('/me', async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // PUT /api/students/me — update profile fields
-router.put('/me', async (req, res) => {
+router.put('/me', async (req, res, next) => {
     try {
         const { name, skills, education, projects } = req.body;
 
@@ -65,7 +65,7 @@ router.put('/me', async (req, res) => {
 
         res.json({ success: true, message: 'Profile updated successfully' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
@@ -131,7 +131,7 @@ router.get('/me/resume/file', async (req, res, next) => {
 });
 
 // GET /api/students/me/notifications
-router.get('/me/notifications', async (req, res) => {
+router.get('/me/notifications', async (req, res, next) => {
     try {
         const student = await Student.findOne({ user: req.user._id });
         if (!student) {
@@ -139,12 +139,12 @@ router.get('/me/notifications', async (req, res) => {
         }
         res.json({ success: true, data: student.notifications });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // PUT /api/students/me/notifications/read — mark all notifications read
-router.put('/me/notifications/read', async (req, res) => {
+router.put('/me/notifications/read', async (req, res, next) => {
     try {
         await Student.updateOne(
             { user: req.user._id },
@@ -152,12 +152,12 @@ router.put('/me/notifications/read', async (req, res) => {
         );
         res.json({ success: true, message: 'All notifications marked as read' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // POST /api/students/me/events — add event to personal calendar
-router.post('/me/events', async (req, res) => {
+router.post('/me/events', async (req, res, next) => {
     try {
         const { title, date, description } = req.body;
         if (!title || !date) {
@@ -180,12 +180,12 @@ router.post('/me/events', async (req, res) => {
 
         res.json({ success: true, message: 'Event added to calendar' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // DELETE /api/students/me/events/:eventId — remove event from calendar
-router.delete('/me/events/:eventId', async (req, res) => {
+router.delete('/me/events/:eventId', async (req, res, next) => {
     try {
         const student = await Student.findOne({ user: req.user._id });
         if (!student) {
@@ -197,7 +197,7 @@ router.delete('/me/events/:eventId', async (req, res) => {
 
         res.json({ success: true, message: 'Event removed from calendar' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 

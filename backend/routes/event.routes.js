@@ -6,17 +6,17 @@ const Activity = require('../models/activity.model');
 const { protect, authorize } = require('../middleware/auth.middleware');
 
 // GET /api/events — all authenticated users can see events
-router.get('/', protect, async (req, res) => {
+router.get('/', protect, async (req, res, next) => {
     try {
         const events = await Event.find().sort({ date: 1 });
         res.json({ success: true, data: events });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // POST /api/events — admin only: create event + notify all students
-router.post('/', protect, authorize('admin'), async (req, res) => {
+router.post('/', protect, authorize('admin'), async (req, res, next) => {
     try {
         const { title, date, description } = req.body;
         if (!title || !date) {
@@ -36,12 +36,12 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
 
         res.status(201).json({ success: true, data: event, message: 'Event created' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // PUT /api/events/:id — admin only: update event + notify students
-router.put('/:id', protect, authorize('admin'), async (req, res) => {
+router.put('/:id', protect, authorize('admin'), async (req, res, next) => {
     try {
         const { title, date, description } = req.body;
 
@@ -66,12 +66,12 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
 
         res.json({ success: true, data: event, message: 'Event updated' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // DELETE /api/events/:id — admin only: delete event + notify students
-router.delete('/:id', protect, authorize('admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
     try {
         const event = await Event.findByIdAndDelete(req.params.id);
         if (!event) {
@@ -89,7 +89,7 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
 
         res.json({ success: true, message: 'Event deleted' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 

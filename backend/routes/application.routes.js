@@ -7,7 +7,7 @@ const Activity = require('../models/activity.model');
 const { protect, authorize } = require('../middleware/auth.middleware');
 
 // GET /api/applications/my — student: get own applications
-router.get('/my', protect, authorize('student'), async (req, res) => {
+router.get('/my', protect, authorize('student'), async (req, res, next) => {
     try {
         const student = await Student.findOne({ user: req.user._id });
         if (!student) {
@@ -20,12 +20,12 @@ router.get('/my', protect, authorize('student'), async (req, res) => {
 
         res.json({ success: true, data: applications });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // POST /api/applications — student: submit an application
-router.post('/', protect, authorize('student'), async (req, res) => {
+router.post('/', protect, authorize('student'), async (req, res, next) => {
     try {
         const { companyId } = req.body;
         if (!companyId) {
@@ -92,12 +92,12 @@ router.post('/', protect, authorize('student'), async (req, res) => {
         if (error.code === 11000) {
             return res.status(400).json({ success: false, message: 'You have already applied to this company' });
         }
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 
 // PUT /api/applications/:id/status — admin: accept or reject an application
-router.put('/:id/status', protect, authorize('admin'), async (req, res) => {
+router.put('/:id/status', protect, authorize('admin'), async (req, res, next) => {
     try {
         const { status } = req.body;
         if (!['Accepted', 'Rejected', 'Pending'].includes(status)) {
@@ -143,7 +143,7 @@ router.put('/:id/status', protect, authorize('admin'), async (req, res) => {
 
         res.json({ success: true, message: `Application ${status.toLowerCase()} successfully` });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 });
 

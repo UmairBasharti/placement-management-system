@@ -90,7 +90,7 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 - **Where:** every `catch` returns `error.message` (e.g. [auth.routes.js:52](backend/routes/auth.routes.js#L52), [:84](backend/routes/auth.routes.js#L84) always, regardless of `NODE_ENV`).
 - **Evidence:** login returned ``Operation `users.findOne()` buffering timed out after 10000ms``.
 - **Fix:** route errors to `next(err)` (or an `asyncHandler` wrapper); the central handler maps ValidationError→400, CastError→400, 11000→409, Multer→400 and otherwise returns a generic 500. Log details server-side only.
-- [ ] **Done when:** no response body contains a Mongoose/Mongo message.
+- [x] **Done when:** no response body contains a Mongoose/Mongo message. — **DONE 2026-11-06 (commit "S6 + B13")**: new `backend/middleware/error.middleware.js` (ValidationError→400 with our own schema messages, CastError→400 "Invalid id", E11000→409, bad/oversized JSON→400/413, everything else→generic 500 with details logged server-side only). All 27 route catch-blocks now call `next(error)`; no route sends `error.message` any more. Also resolves **B13** (bad ObjectId) and the Mongoose-ValidationError half of **B12**. Tested 9/9 against Atlas.
 
 ### S7 🟠 [V] Vulnerable dependencies
 - **Evidence:** `npm audit` → 5 issues: proxy-addr (**critical**), body-parser (high), ip-address (high), mongoose 7.x (moderate, prototype pollution), qs (moderate).
@@ -226,7 +226,7 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 | B10 | ✅ | **DONE 2026-11-06 (with S4)** | ~~`GET /companies/:id` skips the branch/active filter the list applies~~ — fixed + verified | [company.routes.js:28](backend/routes/company.routes.js#L28) | Same filter for students |
 | B11 | 🟡 | [C] | Mass assignment in update (`...rest` → `status`, `notes`, `postedDate`…); `package` can't be cleared (`''` is falsy) | [company.routes.js:77-83](backend/routes/company.routes.js#L77) | Whitelist fields; check `!== undefined` |
 | B12 | 🟡 | [C] | Create with no branches stores `[undefined]`; ValidationError → 500 | [company.routes.js:57](backend/routes/company.routes.js#L57) | Validate with express-validator; ValidationError → 400 |
-| B13 | 🟡 | [C] | Invalid ObjectId on any `/:id` → CastError 500 | all `/:id` routes | `isMongoId()` param validator or CastError→400 |
+| B13 | ✅ | **DONE 2026-11-06 (with S6)** | ~~Invalid ObjectId on any `/:id` → CastError 500~~ — now 400 "Invalid id", verified | all `/:id` routes | `isMongoId()` param validator or CastError→400 |
 | B14 | 🟡 | [C] | Resume "reject" = `approved:false`, same as pending; approve works with no resume; old files never deleted on re-upload; no rejection reason | [admin.routes.js:150-199](backend/routes/admin.routes.js#L150) | `status: 'pending'/'approved'/'rejected'` + `reason`; delete the old file; 400 if no resume |
 | B15 | 🟡 | [C] | Events stored as strings (no date validation, no timezone, lexicographic sort); student calendar entries copy title+date instead of referencing `eventId` → edits/deletes orphan them | [event.model.js:9](backend/models/event.model.js#L9), [student.model.js:41](backend/models/student.model.js#L41) | `date: Date`; store `eventId` refs |
 | B16 | 🟡 | [C] | Hard delete of a company deletes its applications and leaves student statuses stale; the `inactive` status is unused | [company.routes.js:113-116](backend/routes/company.routes.js#L113) | Soft delete (set `inactive`) |
