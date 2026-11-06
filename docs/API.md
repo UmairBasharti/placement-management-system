@@ -1,15 +1,17 @@
 # API reference
 
-Base URL (local): `http://localhost:5000/api`
+Base URL when running locally: `http://localhost:5000/api`
 
 ## Conventions
 
-**Authentication** — after logging in, send the token on every protected request:
+**Authentication.** After logging in, send the token with every protected request:
+
 ```
 Authorization: Bearer <token>
 ```
 
-**Response shape** — every JSON response contains `success` (boolean). Successful responses add `data` and/or `message`; errors add `message` (and, for validation failures, an `errors` array).
+**Response shape.** Every JSON response has a `success` boolean. Successful responses add `data` and/or `message`; errors add `message`, and validation errors also add an `errors` array.
+
 ```json
 { "success": true,  "data": { } }
 { "success": false, "message": "Description is required" }
@@ -19,151 +21,115 @@ Authorization: Bearer <token>
 
 | Code | Meaning |
 |---|---|
-| 200 / 201 | Success / created |
-| 400 | Validation error, bad id, malformed JSON, or a business rule failed (message explains which) |
-| 401 | Missing, invalid or expired token (or wrong login credentials) |
-| 403 | Authenticated but not allowed (wrong role, or branch not eligible) |
-| 404 | Resource or API route not found |
-| 409 | Duplicate value |
+| 200, 201 | Success, created |
+| 400 | Validation error, invalid id, malformed JSON, or a business rule failed (the message says which) |
+| 401 | Missing, invalid or expired token, or wrong login |
+| 403 | Logged in but not allowed (wrong role, or the job is not open to the student's course) |
+| 404 | Record or API route not found |
+| 409 | Duplicate value (for example an e-mail that is already registered) |
 | 413 | Request body too large |
+| 422 | A resume PDF could not be read (resume suggestions only) |
 | 429 | Rate limit exceeded |
-| 500 | Unexpected server error (details are logged server-side only) |
+| 500 | Unexpected server error (details are in the server log only) |
 
-**Rate limits (per IP)** — general API: 600 requests / 15 min · login: 10 *failed* attempts / 15 min (successful logins are not counted) · registration: 20 / hour. Responses include standard `RateLimit-*` headers.
+**Rate limits, per IP address.** General API: 600 requests per 15 minutes. Login: 10 *failed* attempts per 15 minutes (successful logins are not counted). Registration: 20 per hour. Responses carry the standard `RateLimit-*` headers.
 
-**Ids** — MongoDB ObjectIds (24 hex characters). An invalid id returns `400 { "message": "Invalid id" }`.
+**Ids.** MongoDB ObjectIds (24 hex characters). An invalid id returns `400 { "message": "Invalid id" }`.
 
-Legend: 🔓 public · 🔑 any logged-in user · 🎓 student only · 🛡️ admin only
+**Access.** *Public* needs no login. *Any user* needs a valid token. *Student* and *Admin* need that role.
 
 ---
 
-## Health
-| | Endpoint | Description |
+## Public and health
+
+| Access | Endpoint | Description |
 |---|---|---|
-| 🔓 | `GET /health` | `{ "status": "ok", "database": "connected", "uptime": 123 }` — HTTP 503 with `"degraded"` if the database is down |
+| Public | `GET /health` | `{ "status": "ok", "database": "connected", "uptime": 123 }`. HTTP 503 with `"degraded"` while the database is unreachable. |
+| Public | `GET /public/stats` | `{ "data": { "students": 8, "companies": 6, "placed": 1 } }`. Counts only, cached for 60 seconds. Used by the home page. |
+| Public | `GET /public/meta` | `{ "data": { "branches": ["MCA","MBA"], "jobTypes": ["Full Time","Part Time","Internship"] } }`. Option lists for every form, cached for 5 minutes. |
 
 ## Auth
 
-### `POST /auth/register` 🔓
-Creates a **student** account (admins cannot be created here).
-```json
-{ "name": "Rahul Sharma", "email": "rahul@pms.com", "password": "student123", "branch": "MCA" }
-```
-- `branch` must be `MCA` or `MBA`; `password` min 6 characters; email is trimmed and lower-cased.
-- `201` → `{ "success": true, "message": "Registration successful! Please log in." }`
-- `400` → e.g. `{ "message": "Password must be at least 6 characters", "errors": [...] }`, or `"Email already registered"`.
+| Access | Endpoint | Description |
+|---|---|---|
+| Public | `POST /auth/register` | Body `{ name, email, password, branch }`. Password at least 6 characters; `branch` must be one of the courses from `/public/meta`. Always creates a student. Returns `201`; the user then logs in. |
+| Public | `POST /auth/login` | Body `{ email, password }`. Returns `{ token, user: { id, name, email, role } }`. The token lasts `JWT_EXPIRE` (24 h by default). |
+| Any user | `GET /auth/me` | The current user: `{ id, name, email, role, branch }`. |
 
-### `POST /auth/login` 🔓
-```json
-{ "email": "rahul@pms.com", "password": "student123" }
-```
-`200` → `{ "success": true, "token": "<jwt>", "user": { "id", "name", "email", "role" } }` · `401` → `"Invalid email or password"`.
+## Student profile and resume
 
-### `GET /auth/me` 🔑
-`{ "user": { "id", "name", "email", "role", "branch" } }` — handy to verify a stored token.
-
----
-
-## Student profile (🎓 all endpoints below)
+All endpoints in this section are **student only**.
 
 | Endpoint | Description |
 |---|---|
-| `GET /students/me` | Full profile (see below) |
-| `PUT /students/me` | Update `name`, `skills`, `education`, `projects` |
-| `POST /students/me/resume` | Upload a PDF (`multipart/form-data`, field **`resume`**) |
-| `GET /students/me/resume/file` | Download/stream your own resume PDF |
-| `GET /students/me/notifications` | List notifications |
-| `PUT /students/me/notifications/read` | Mark all notifications read |
-| `POST /students/me/events` | Add an event to your personal calendar — `{ title, date, description }` |
-| `DELETE /students/me/events/:eventId` | Remove it |
+| `GET /students/me` | Profile: `id, name, email, course, skills, education, projects, status, resume, notifications, events, statusHistory`. |
+| `PUT /students/me` | Body with any of `name`, `skills` (max 500 characters), `education` (1500), `projects` (2500). Only the fields that are sent are changed; an empty string clears a field. |
+| `POST /students/me/resume` | `multipart/form-data` with one field `resume` (PDF, up to 5 MB). Replaces the previous resume and resets its status to `pending`. The type is checked by MIME type and by the real `%PDF-` header. |
+| `GET /students/me/resume/file` | Streams the student's own PDF. |
+| `GET /students/me/resume/suggestions` | Reads the stored PDF and returns `{ skills: [..], education, projects, textFound }`. Nothing is saved; the client applies the suggestions it wants with `PUT /students/me`. Returns `422` if the PDF cannot be read, `400` if no resume is uploaded. |
+| `GET /students/me/notifications` | The student's notifications, oldest first (the newest 100 are kept). |
+| `PUT /students/me/notifications/read` | Marks all notifications as read. |
+| `POST /students/me/events` | Body `{ eventId }`. Copies an event into the personal calendar; the title and date come from the stored event. `400` if it is already there. |
+| `DELETE /students/me/events/:eventId` | Removes an event from the personal calendar. |
 
-`GET /students/me` → `data`:
-```json
-{
-  "id": "…", "userId": "…", "name": "Rahul Sharma", "email": "rahul@pms.com", "course": "MCA",
-  "skills": "JavaScript, Node.js", "education": "…", "projects": "…",
-  "status": "Under Review",
-  "resume": { "name": "Resume.pdf", "path": "<stored file name>", "uploadedAt": "…", "approved": false },
-  "notifications": [ { "message": "…", "timestamp": "…", "read": false } ],
-  "events": [ ], "statusHistory": [ { "status": "Under Review", "message": "Applied to …", "timestamp": "…" } ]
-}
-```
-
-**Resume upload rules** — PDF only (type is checked, then the file's real `%PDF-` header), max **5 MB**. Errors are `400` with a clear message: `Only PDF files are allowed`, `File too large (maximum 5 MB)`, `The uploaded file is not a valid PDF`, `No file uploaded`. A successful upload resets `approved` to `false` and deletes the previous file.
-```bash
-curl -X POST http://localhost:5000/api/students/me/resume \
-     -H "Authorization: Bearer $TOKEN" -F "resume=@MyResume.pdf;type=application/pdf"
-```
-
----
+`resume` looks like `{ name, fileId, uploadedAt, status }` with `status` one of `pending`, `approved`, `rejected`. Without an upload, `name` and `fileId` are `null`.
 
 ## Companies
 
-| | Endpoint | Description |
+| Access | Endpoint | Description |
 |---|---|---|
-| 🔑 | `GET /companies` | **Students:** only *active* companies open to their branch, newest first, without admin notes. **Admins:** all active companies, with notes. |
-| 🔑 | `GET /companies/:id` | **Students:** 404 unless the company is active and open to their branch. **Admins:** includes `stats` (`total`, `accepted`, `pending`, `rejected`) and `notes`. |
-| 🛡️ | `POST /companies` | Create a company |
-| 🛡️ | `PUT /companies/:id` | Update a company |
-| 🛡️ | `DELETE /companies/:id` | Delete a company **and its applications** |
-| 🛡️ | `POST /companies/:id/notes` | Add an internal note — `{ "text": "…" }` |
-
-Create / update body:
-```json
-{
-  "name": "Tech Solutions Inc.", "description": "…", "location": "Mumbai",
-  "jobType": "Full Time", "branches": ["MCA", "MBA"],
-  "requirements": "Strong programming skills", "package": "8–12 LPA"
-}
-```
-- `jobType`: `Full Time` · `Part Time` · `Internship`. `branches`: at least one of `MCA` / `MBA` (a single string is accepted too).
-- `PUT` only changes these fields: `name, description, location, jobType, requirements, package, status, branches` (anything else is ignored). Send `""` to clear `requirements`/`package`. `status` is `active` or `inactive`.
-- Missing required fields or unknown branches → `400` with the first validation message.
-
----
+| Any user | `GET /companies` | Active companies, newest first. Students only get companies open to their course, and never the admin notes. |
+| Student | `GET /companies/recommended?limit=6` | Jobs ranked by skill match: `{ data: [{ company, matchScore, matchedSkills, missingSkills }], meta: { hasSkills } }`. `limit` is 1 to 50. Excludes jobs already applied to. |
+| Any user | `GET /companies/:id` | One company. Students only get an active company open to their course; admins get any company plus `stats: { total, accepted, pending, rejected }`. |
+| Admin | `POST /companies` | Body `{ name, description, location, jobType, branches, requirements, package, requiredSkills }`. `branches` is an array with at least one course. `requiredSkills` is an array or comma-separated text; known skills are normalised (`nodejs` becomes `Node.js`), at most 20. |
+| Admin | `PUT /companies/:id` | Any of the same fields plus `status` (`active` or `inactive`). Only the fields that are sent change. |
+| Admin | `DELETE /companies/:id` | Archives the company (`status: inactive`). It disappears from the lists, and existing applications are kept. |
+| Admin | `POST /companies/:id/notes` | Body `{ text }` (up to 500 characters). Internal note, never shown to students. |
 
 ## Applications
 
-| | Endpoint | Description |
+| Access | Endpoint | Description |
 |---|---|---|
-| 🎓 | `GET /applications/my` | Your applications (newest first, with company name/location/type/package) |
-| 🎓 | `POST /applications` | Apply — `{ "companyId": "…" }` |
-| 🛡️ | `PUT /applications/:id/status` | Decide — `{ "status": "Accepted" \| "Rejected" \| "Pending" }` |
+| Student | `GET /applications/my` | The student's applications with company name, location, job type and package. |
+| Student | `POST /applications` | Body `{ companyId }`. See the rules below. Returns `201`. |
+| Admin | `PUT /applications/:id/status` | Body `{ status }` with `Accepted`, `Rejected` or `Pending`. Updates the student's placement status and notifies them. |
 
-**Apply rules** (all enforced server-side): company exists and is `active` · company is open to your branch (`403` otherwise) · you uploaded a resume · the resume is **approved** · your profile has skills · you haven't applied to this company before. Applying moves an *Unplaced* student to *Under Review* and adds a notification.
+A student can apply only when all of these hold:
 
-**Deciding** recomputes the student's placement status from *all* their applications (see [ARCHITECTURE.md](ARCHITECTURE.md#5-placement-status-state-machine)), notifies the student, and logs an activity. Sending the status the application already has is a harmless no-op.
-
----
+| Rule | Response |
+|---|---|
+| The company exists and is `active` | 404 or 400 |
+| The company is open to the student's course | 403 |
+| A resume is uploaded | 400 |
+| The resume is `approved` (a `pending` or `rejected` one gives a different message) | 400 |
+| The profile has skills | 400 |
+| The student has not applied to this company before | 400 |
 
 ## Events
 
-| | Endpoint | Description |
+| Access | Endpoint | Description |
 |---|---|---|
-| 🔑 | `GET /events` | All events, soonest first |
-| 🛡️ | `POST /events` | `{ "title", "date", "description" }` — notifies **all students** |
-| 🛡️ | `PUT /events/:id` | Update — notifies all students |
-| 🛡️ | `DELETE /events/:id` | Delete — notifies all students |
+| Any user | `GET /events` | All events, soonest first. |
+| Admin | `POST /events` | Body `{ title, description, date }`. `date` looks like `2026-11-20T10:00`. Notifies every student. |
+| Admin | `PUT /events/:id` | Updates the event, refreshes the copies in students' calendars and notifies every student. |
+| Admin | `DELETE /events/:id` | Deletes the event, removes it from students' calendars and notifies every student. |
 
-`date` is the local date-time string from a `datetime-local` input, e.g. `2026-11-20T10:00`.
+## Admin
 
----
-
-## Admin (🛡️ all endpoints below)
+All endpoints in this section are **admin only**.
 
 | Endpoint | Description |
 |---|---|
-| `GET /admin/stats` | `{ totalStudents, placedStudents, totalCompanies, totalApplications, statusBreakdown: [{ _id, count }], branchBreakdown: [{ _id, count }] }` |
-| `GET /admin/activities` | The 10 most recent activity entries |
-| `GET /admin/students` | All students (profile + user data merged) |
-| `PUT /admin/students/:id/status` | `{ "status": "Unplaced" \| "Under Review" \| "Interview Scheduled" \| "Placed" }` — `:id` is the **student** id; notifies the student |
-| `GET /admin/students/:id/resume` | Stream the student's resume PDF |
-| `GET /admin/resumes` | Students who have uploaded a resume |
-| `PUT /admin/resumes/:id/approve` | Approve (notifies the student) |
-| `PUT /admin/resumes/:id/reject` | Reject (notifies the student to upload a new one) |
-| `GET /admin/applications` | All applications with company details |
-
----
+| `GET /admin/stats` | `{ totalStudents, placedStudents, totalCompanies, totalApplications, statusBreakdown: [{ _id, count }], branchBreakdown: [{ _id, count }] }`. |
+| `GET /admin/activities` | The 10 latest activity entries. Entries are removed after 90 days. |
+| `GET /admin/students` | Every student with account and profile data and the status timeline. |
+| `PUT /admin/students/:id/status` | Body `{ status }` with `Unplaced`, `Under Review`, `Interview Scheduled` or `Placed`. `:id` is the student id. |
+| `GET /admin/resumes` | Students who uploaded a resume: `{ id, name, email, course, resume }`. |
+| `GET /admin/students/:id/resume` | Streams that student's PDF. |
+| `PUT /admin/resumes/:id/approve` | Approves the resume and notifies the student. `:id` is the student id. |
+| `PUT /admin/resumes/:id/reject` | Rejects the resume; the student is asked to upload a new one. |
+| `GET /admin/companies/:id/matches` | Students from the eligible courses ranked by how well their skills fit the job: `{ studentId, name, email, course, status, resumeStatus, matchScore, matchedSkills, missingSkills }`. |
+| `GET /admin/applications` | Every application with company details. |
 
 ## Example session
 
@@ -173,10 +139,17 @@ TOKEN=$(curl -s -X POST http://localhost:5000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"rahul@pms.com","password":"student123"}' | node -pe "JSON.parse(require('fs').readFileSync(0)).token")
 
-# 2. list companies open to this student's branch
-curl -s http://localhost:5000/api/companies -H "Authorization: Bearer $TOKEN"
+# 2. jobs ranked for this student
+curl -s http://localhost:5000/api/companies/recommended -H "Authorization: Bearer $TOKEN"
 
-# 3. apply (needs skills + an approved resume)
+# 3. upload a resume (an admin must approve it before the student can apply)
+curl -s -X POST http://localhost:5000/api/students/me/resume \
+  -H "Authorization: Bearer $TOKEN" -F "resume=@my-resume.pdf;type=application/pdf"
+
+# 4. see what the scan found in it
+curl -s http://localhost:5000/api/students/me/resume/suggestions -H "Authorization: Bearer $TOKEN"
+
+# 5. apply (needs skills and an approved resume)
 curl -s -X POST http://localhost:5000/api/applications \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"companyId":"<company id from step 2>"}'

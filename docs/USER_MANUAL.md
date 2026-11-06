@@ -1,10 +1,10 @@
 # User manual
 
-This guide walks through the portal from two points of view: the **student** and the **placement cell (admin)**. Screenshots use demo data.
+This guide covers the portal from two points of view: the **student** and the **placement cell (admin)**. The screenshots use fictional demo data.
 
 - [Getting an account](#getting-an-account)
 - [Student guide](#student-guide)
-- [Placement cell (admin) guide](#placement-cell-admin-guide)
+- [Placement cell guide](#placement-cell-guide)
 - [Using the portal on a phone](#using-the-portal-on-a-phone)
 - [FAQ](#faq)
 
@@ -12,131 +12,144 @@ This guide walks through the portal from two points of view: the **student** and
 
 ## Getting an account
 
-**Students** register themselves. **Admins** (placement officers) are created by whoever sets up the system (the seed script creates `admin@pms.com`).
+**Students** register themselves. **Admins** (placement officers) are created by whoever sets up the system; the seed script creates `admin@pms.com`.
 
-1. Open the portal's home page and click **Login / Signup**.
-2. Click **Register** on the red panel and fill in your name, e-mail, a password (at least 6 characters), confirm it, and choose your **branch** (MCA or MBA).
-3. After registering you are taken back to the login form — log in with the same e-mail and password.
+1. Open the home page and choose **Student login**, then **Register** on the red panel.
+2. Enter your name, e-mail, a password of at least 6 characters (twice) and your **course** (MCA or MBA).
+3. You are taken back to the login form. Log in with the same e-mail and password.
 
 ![Register](screenshots/register-desktop.png)
 
-> Your branch decides which companies you can see and apply to, and it cannot be changed later.
+> Your course decides which companies you can see and apply to. It cannot be changed later.
 
-Admins use the **Admin Login** button on the home page (it only accepts admin accounts).
+Admins use the **Admin login** button on the home page. It only accepts admin accounts, and the student login only accepts students.
 
 ---
 
 ## Student guide
 
-After logging in you land on your **Dashboard**. The sidebar gives access to every section.
+After logging in you land on the **Dashboard**. The sidebar leads to every section.
 
 ![Student dashboard](screenshots/student-dashboard.png)
 
 ### Dashboard
-- **Placement Status** — where you are right now (*Unplaced → Under Review → Interview Scheduled → Placed*) with a progress bar.
-- **Applications** — how many you have sent and how many are pending, accepted or rejected.
-- **Profile Completion** — a checklist of what is still missing.
-- **Recent Applications** and **Upcoming Events** at a glance.
+- **Placement status** shows where you are: *Unplaced*, *Under Review*, *Interview Scheduled* or *Placed*, with a progress bar. **View timeline** opens the history.
+- **Applications** counts what you sent and how many are pending, accepted or rejected.
+- **Profile completion** is a checklist of what is still missing: skills, education, projects, a resume, an approved resume.
+- **Recommended for you** lists open jobs ranked by how many of the required skills you already have (see [Recommendations](#recommendations)).
+- **Recent applications** and **Upcoming events** are listed below.
 
 ### 1. Complete your profile
-Open **Profile**, fill in your **Skills** (comma-separated), **Education** and **Projects**, then press **Save Profile**. Your name can be edited; e-mail and course are read-only.
+Open **Profile** and fill in **Skills** (separated by commas), **Education** and **Projects**, then press **Save profile**. You can change your name; e-mail and course are read-only.
 
-> **Skills are required** before you can apply to any company.
+> You need at least one skill on your profile before you can apply to a company.
+
+![Profile](screenshots/student-profile.png)
 
 ### 2. Upload your resume
-Open **Resume**, choose a **PDF** (maximum **5 MB**) and press **Upload**.
+Open **Resume**, choose a **PDF** (up to 5 MB) and press **Upload**.
 
 ![Resume page](screenshots/student-resume.png)
 
-- The resume is marked **"pending approval"** until the placement cell reviews it.
-- You can **view** your own resume at any time, and uploading a new one replaces the old one (and asks for approval again).
-- You will get a **notification** when it is approved or rejected.
+- The resume shows **pending** until the placement cell reviews it. You get a notification when it is approved or rejected.
+- **View resume** opens your own file. Uploading a new one replaces the old one and starts the approval again.
+- Right after an upload, and any time later with **Fill my profile from this resume**, the portal reads the PDF and shows what it found. Tick what you want, edit the text if needed and press **Add to my profile**. Nothing is saved until you do. Skills you already have are marked.
+
+![Resume scan](screenshots/scan-dialog.png)
+
+If the PDF is a scan or a photo it contains no text; the portal tells you, and you fill in the profile by hand. A resume exported from Word or Google Docs works best.
 
 ### 3. Find and apply to companies
-Open **Companies**. You only see companies that are open to *your* branch. Use the search box and the job-type filter, press **View Details** for the full description, and **Apply** to send your application.
+Open **Companies**. You only see companies that are open to your course. Search by name or city, filter by job type, sort by newest or **best match**, press **View details** for the full description and **Apply** to send your application.
 
 ![Companies](screenshots/student-companies.png)
 
 You can apply when **all** of these are true:
 - your profile has skills,
 - your resume is uploaded **and approved**,
-- the company is open to your branch and is still accepting applications,
+- the company is open to your course and still accepting applications,
 - you have not applied to it before.
 
-If something is missing, the portal tells you exactly what.
+If something is missing, the portal says exactly what.
+
+### Recommendations
+Every job shows a **match** percentage: the share of its required skills that you already have. Green skill chips are skills you have, grey ones are still to learn. Skills come from your profile's Skills field and from known skills named in your projects. Jobs you already applied to are left out of the recommendations, and a job that lists no recognisable skills has no percentage.
 
 ### 4. Follow your progress
 - **Status** shows a timeline of your placement-status changes.
-- **Dashboard → Recent Applications** shows each application as *Pending*, *Accepted* or *Rejected*.
-- **Notifications** lists every update from the placement cell (newest first).
+- **Dashboard, Recent applications** shows each application as *Pending*, *Accepted* or *Rejected*.
+- **Notifications** lists every update from the placement cell, newest first. The number on the sidebar item counts unread ones.
 
 ### 5. Events and your calendar
-Open **Calendar** to see placement drives, workshops and mock interviews. Press **Add to Calendar** on an upcoming event to keep it in your personal list, or the **ⓘ** button for the details.
+Open **Calendar** to see drives, workshops and mock interviews. **Add to my calendar** keeps an event in your personal list, and the **i** button shows its details. If the placement cell changes or cancels an event, your copy follows.
 
 ![Calendar](screenshots/student-calendar.png)
 
 ### Logging out
-Press **Logout** at the bottom of the sidebar. If you are inactive for more than 24 hours you will be asked to log in again.
+Press **Logout** at the bottom of the sidebar. A login lasts 24 hours; after that you log in again. If you log in or out in one browser tab, your other open tabs reload.
 
 ---
 
-## Placement cell (admin) guide
+## Placement cell guide
 
 ### Dashboard
-Shows the placement-status **doughnut chart**, the **course-wise** student count, and the latest **activities** (applications, uploads, status changes, new events and companies).
+Shows the headline numbers (students, placed, active companies, applications), a **placement-status chart**, the number of students per course, and the **recent activity** feed.
 
 ![Admin dashboard](screenshots/admin-dashboard.png)
 
 ### Companies
-Open **Companies** to add, view, edit or delete companies.
+Open **Companies** to add, view, edit or remove companies.
 
 ![Admin companies](screenshots/admin-companies.png)
 
-- **Add New Company** — name, description, location, job type, **eligible branches** (tick at least one), requirements and package.
-- **Edit** loads a company into the same form; **View Details** shows its stats; **Delete** removes the company *and its applications* (you are asked to confirm).
-- Search and filter by job type or branch, and sort by newest, oldest or name.
-- The **Applications** list below shows every application — press **Accept** or **Reject** on pending ones. The student's placement status and notifications update automatically.
+- **Add company** asks for name, description, location, job type, the **courses** it is open to (tick at least one), requirements, package and **required skills** (comma separated). The required skills drive the matching, so enter the real skills of the job.
+- **Details** opens the company with application counts, its required skills, the **best-matching students** (match percentage, matching skills and resume status) and **internal notes** that students never see.
+- **Edit** loads the company into the same form.
+- **Remove** takes the company off the lists. It is archived, not deleted, so the applications already made stay.
+- Search, filter by job type or course, and sort by newest, oldest or name.
+- The **Applications** list below the companies shows every application. Press **Accept** or **Reject**; the student's placement status and notifications update automatically.
+
+![Company details](screenshots/admin-company-details.png)
 
 ### Students
-Open **Students** to search the directory and filter by course or status. Use the dropdown on a student's card to set their placement status manually (for example *Interview Scheduled*); the student is notified.
+Open **Students** to search and filter by course or placement status. Use the dropdown on a student's card to set the placement status by hand (for example *Interview Scheduled*); the student is notified. **Profile** shows the skills, education and projects, a button to open the resume, and the placement history. **Export CSV** downloads the list.
 
 ![Admin students](screenshots/admin-students.png)
 
 ### Resumes
-Open **Resumes** to review uploads: the **eye** button opens the PDF in a new tab, the **✓** button approves it and the **✗** button rejects it (the student is asked to upload a new one). Students can only apply after approval.
+Open **Resumes** to review uploads. The eye button opens the PDF, the tick approves it and the cross rejects it (you are asked to confirm; the student is then asked to upload a new one). Students can apply only after approval.
 
 ![Admin resumes](screenshots/admin-resumes.png)
 
 ### Calendar
-Create events with a title, date/time and description. **Every student is notified** when an event is created, changed or cancelled.
+Create events with a title, a date and time and a description. **Every student is notified** when an event is created, changed or cancelled, and the copies in their calendars are updated.
 
 ![Admin calendar](screenshots/admin-calendar.png)
-
-### Exporting data
-**Export Data** (top right) downloads a CSV of all students: name, e-mail, course, status, skills, education and projects.
 
 ---
 
 ## Using the portal on a phone
 
-On screens narrower than 993 px the sidebar becomes a menu: tap the **☰** button in the top bar to open it, tap an item (or outside the menu, or press **Esc**) to close it.
+On screens narrower than 993 px the sidebar becomes a menu. Tap the round menu button in the top bar to open it; tap an item, tap outside the menu or press **Esc** to close it.
 
 <p>
-  <img src="screenshots/mobile-student.png" alt="Mobile dashboard" width="30%">
-  <img src="screenshots/mobile-student-menu.png" alt="Mobile menu" width="30%">
-  <img src="screenshots/mobile-admin.png" alt="Mobile admin" width="30%">
+  <img src="screenshots/mobile-student.png" alt="Phone: student dashboard" width="30%">
+  <img src="screenshots/mobile-student-menu.png" alt="Phone: menu" width="30%">
+  <img src="screenshots/mobile-admin.png" alt="Phone: admin dashboard" width="30%">
 </p>
 
 ---
 
 ## FAQ
 
-**I can't press Apply / I get a message about my resume.** Your resume must be uploaded *and* approved by the placement cell, and your profile needs skills.
+**I cannot apply, or I get a message about my resume.** Your resume must be uploaded *and* approved by the placement cell, and your profile needs skills.
 
-**Why don't I see a particular company?** Companies are shown only if they are active and open to your branch.
+**Why do I not see a particular company?** Companies appear only if they are active and open to your course.
 
-**I forgot my password.** There is no self-service reset yet; ask the placement cell to help.
+**The scan found nothing, or the wrong thing.** The scan looks for known skills and for headings such as *Education* and *Projects*. If your resume uses different headings, copy the text into the profile by hand.
 
-**"Too many failed login attempts."** After 10 wrong passwords from the same network the login is paused for 15 minutes.
+**I forgot my password.** There is no self-service reset yet. Ask the placement cell.
 
-**My session suddenly ended.** Sessions last 24 hours; after that (or if the server was reconfigured) you simply log in again.
+**"Too many failed login attempts."** After 10 wrong passwords from the same network the login pauses for 15 minutes.
+
+**My session ended.** A login lasts 24 hours. After that, or if the server was reconfigured, log in again.

@@ -2,7 +2,7 @@
 
 ## 1. System overview
 
-The app is a classic three-tier web application served from a **single Node.js process**: Express serves the static frontend pages *and* the JSON API, and talks to MongoDB.
+A three-tier web application served from a **single Node.js process**. Express serves the static frontend pages and the JSON API, and talks to MongoDB. Resume PDFs are stored in the same database (GridFS), so there is nothing else to run or back up.
 
 ```mermaid
 flowchart LR
@@ -13,32 +13,37 @@ flowchart LR
     subgraph Server["Node.js · Express"]
         S["Security layer<br/>helmet (CSP) · CORS (closed) · rate limits"]
         A["Auth middleware<br/>verify JWT · role check"]
-        R["Routes<br/>auth · students · companies<br/>applications · events · admin"]
-        V["express-validator<br/>+ Mongoose schema validation"]
+        R["Routes<br/>public · auth · students · companies<br/>applications · events · admin"]
+        V["Validation<br/>express-validator + Mongoose schemas"]
+        U["Utilities<br/>matcher · skills · resume parser<br/>placement-status rules · GridFS helpers"]
         E["Central error handler"]
     end
-    subgraph Data["Storage"]
-        M[("MongoDB Atlas")]
-        F[("backend/uploads/<br/>resume PDFs")]
+    subgraph Data["MongoDB Atlas"]
+        M[("Collections<br/>users · students · companies<br/>applications · events · activities")]
+        F[("GridFS bucket<br/>resumes")]
     end
     P -- "GET static files" --> S
     J -- "/api/* JSON" --> S
     S --> A --> R --> V --> M
-    R --> F
+    R --> U
+    U --> F
     R -. "errors" .-> E
 ```
 
-**Why one origin?** Serving the frontend from Express means no CORS configuration is needed, the app starts with a single command, and the Content-Security-Policy can be strict (`connect-src 'self'`).
+**Why one origin?** Serving the frontend from Express means no CORS set-up, a single command to start, and a strict Content-Security-Policy (`connect-src 'self'`).
 
 ## 2. Request lifecycle
 
-1. **Static files** (`/`, `/login.html`, `/css/*`, `/js/*`) are served by `express.static`.
-2. **API calls** (`/api/*`) pass through, in order: `helmet` → CORS (disabled unless `CLIENT_ORIGIN` is set) → JSON body parsing (100 kB limit) → rate limiters → route.
-3. Protected routes run `protect` (verifies the JWT and loads the user) and, where needed, `authorize('admin' | 'student')`.
-4. Input is validated (`express-validator` on auth routes, Mongoose schemas everywhere).
-5. Any error is passed to `next(err)` and mapped by the **central error handler** to a clean 4xx/5xx response. Unknown API paths return a JSON 404; unknown pages return the branded `404.html`.
+1. `helmet` adds the security headers, including the Content-Security-Policy.
+2. CORS is off unless `CLIENT_ORIGIN` is set. JSON bodies are limited to 100 kB.
+3. **Static files** (`/`, `/login.html`, `/css/*`, `/js/*`) are served by `express.static`.
+4. **API calls** (`/api/*`) pass the rate limiters, then reach their route. Protected routes run `protect` (verifies the JWT and loads the user) and, where needed, `authorize('admin' | 'student')`.
+5. Input is checked by `express-validator` on the auth and profile routes and by the Mongoose schemas everywhere.
+6. Any error goes to `next(err)` and the **central error handler** turns it into a short 4xx or 5xx response. Unknown API paths get a JSON 404, unknown pages the branded `404.html`.
 
-## 3. Authentication & authorization
+On startup the server connects to MongoDB first and exits with a clear message if that fails. `SIGINT` and `SIGTERM` close the HTTP server and the database connection before exiting.
+
+## 3. Authentication and authorization
 
 ```mermaid
 sequenceDiagram
@@ -48,22 +53,23 @@ sequenceDiagram
     participant DB as MongoDB
     U->>B: email + password
     B->>S: POST /api/auth/login
-    S->>DB: find user (+password hash)
+    S->>DB: find user (with password hash)
     DB-->>S: user
     S->>S: bcrypt.compare()
-    S-->>B: { token (JWT, 24h), user { role } }
-    B->>B: store token + user in localStorage
+    S-->>B: { token (JWT, 24 h), user { role } }
+    B->>B: store token and user in localStorage
     B->>S: GET /api/... (Authorization: Bearer token)
-    S->>S: verify JWT signature + expiry
+    S->>S: verify JWT signature and expiry
     S->>DB: load user by id
     S->>S: authorize(role)
     S-->>B: data (or 401 / 403)
-    Note over B: On 401 the page clears the session<br/>and returns to the home page
+    Note over B: On a 401 the page clears the session<br/>and returns to the home page
 ```
 
-- **Roles**: `student` and `admin`. Public registration can only create students; the admin account is created by the seed script.
-- **Login page modes**: the "Admin Login" link (`login.html?admin=true`) only accepts admins; the normal login only accepts students. The server still enforces roles on every route, so this is a convenience, not the security boundary.
-- **Token**: JWT containing the user id, signed with `JWT_SECRET`, expiring after `JWT_EXPIRE` (default 24 h). It is stored in `localStorage` (see the trade-off noted in the README).
+- **Roles:** `student` and `admin`. Public registration can only create students; the admin account comes from the seed script.
+- **Login pages:** the "Admin login" button (`login.html?admin=true`) admits only admins, the normal login only students. The server still checks the role on every route, so this is a convenience, not the security boundary.
+- **Token:** a JWT holding the user id, signed with `JWT_SECRET`, valid for `JWT_EXPIRE` (24 h by default), kept in `localStorage`. The trade-off is described in the README.
+- **Several tabs:** the session is shared by all tabs of a browser. When one tab logs in or out, the others reload (the `storage` event), so a stale tab can never keep acting as the previous user.
 
 ## 4. Resume workflow
 
@@ -71,19 +77,24 @@ sequenceDiagram
 sequenceDiagram
     actor S as Student
     participant API as Express API
-    participant FS as uploads/
+    participant G as GridFS (resumes)
     actor A as Admin
     S->>API: POST /students/me/resume (multipart PDF)
-    API->>API: type + size check (multer, 5 MB)
-    API->>FS: save as <random-uuid>.pdf
-    API->>API: verify real "%PDF-" header
+    API->>API: multer (memory, 5 MB, PDF MIME type)
+    API->>API: check the real "%PDF-" header
     alt not a real PDF
-        API->>FS: delete file
         API-->>S: 400 "not a valid PDF"
     else valid
-        API->>API: store metadata, approved = false, delete previous file
+        API->>G: store the file
+        API->>API: save resume { name, fileId, status: pending }
+        API->>G: delete the previous file
         API-->>S: 200
     end
+    S->>API: GET /students/me/resume/suggestions
+    API->>G: read the file
+    API->>API: extract text, find skills, education, projects
+    API-->>S: suggestions (nothing saved)
+    S->>API: PUT /students/me (the parts the student kept)
     A->>API: GET /admin/students/:id/resume
     API-->>A: PDF stream (private, no-store)
     A->>API: PUT /admin/resumes/:id/approve
@@ -91,11 +102,34 @@ sequenceDiagram
     Note over S,API: Applying requires an approved resume
 ```
 
-Resumes are **never** exposed through a public URL; both the student and the admin download them through authenticated routes, and the browser opens them from a temporary blob URL.
+- The file is held in memory (never on disk) until it has passed the checks, so a rejected upload leaves nothing behind. If saving the metadata fails after the file was stored, the new file is deleted again.
+- Resumes have **no public URL**. A student downloads their own through `/students/me/resume/file`, an admin any through `/admin/students/:id/resume`. The browser opens them from a temporary blob URL.
+- The student's resume status is `pending` after every upload, then `approved` or `rejected` by the placement cell.
 
-## 5. Placement-status state machine
+## 5. Job matching and resume scan
 
-A student's `status` reflects their progress. The rules live in [`backend/utils/placementStatus.js`](../backend/utils/placementStatus.js) and are covered by unit tests.
+Everything here is deterministic code, with no external service.
+
+```mermaid
+flowchart LR
+    D[("skills dictionary<br/>about 190 skills + spellings")] --> X["extractSkills(text)"]
+    PDF["resume PDF"] --> T["extract text (unpdf)"] --> X
+    X --> SUG["suggestions: skills,<br/>education, projects"]
+    PF["profile skills + projects"] --> H["student's skills"]
+    X --> H
+    RQ["job: requiredSkills,<br/>or skills found in requirements"] --> N["job's required skills"]
+    H --> SC["score = matched / required"]
+    N --> SC
+    SC --> REC["student: recommended jobs<br/>admin: best-matching students"]
+```
+
+- The dictionary ([`backend/data/skills.js`](../backend/data/skills.js)) maps spellings to one name (`nodejs`, `node.js` and `node` are all *Node.js*). Ambiguous names such as C, R or Go only count as a separate item in a Skills section.
+- [`backend/utils/matcher.js`](../backend/utils/matcher.js) holds the pure functions that score a student against a job. [`backend/utils/resumeParser.js`](../backend/utils/resumeParser.js) reads the PDF (at most 10 pages, 8 seconds) and splits it into sections by heading.
+- A job with no recognisable skills cannot be scored. It stays in the normal list and is left out of the recommendations.
+
+## 6. Placement-status state machine
+
+A student's `status` reflects their progress. The rules are in [`backend/utils/placementStatus.js`](../backend/utils/placementStatus.js) and covered by unit tests.
 
 ```mermaid
 stateDiagram-v2
@@ -114,33 +148,41 @@ stateDiagram-v2
     Placed --> Unplaced: offer withdrawn, nothing else open
 ```
 
-Key rules:
-- Applying only moves an **Unplaced** student to *Under Review*; it never downgrades *Interview Scheduled* or *Placed*.
-- Rejecting one application does **not** unplace a student who has been accepted elsewhere.
-- *Interview Scheduled* is set manually by an admin and is never overridden by application decisions (other than becoming *Placed*).
-- The timeline records only real status changes; the reason for each decision also appears as a notification.
+- Applying only moves an **Unplaced** student to *Under Review*. It never downgrades *Interview Scheduled* or *Placed*.
+- Rejecting one application does not unplace a student who was accepted elsewhere.
+- *Interview Scheduled* is set by an admin and is never overridden by application decisions, except by becoming *Placed*.
+- The timeline records real status changes only. The reason for each decision also reaches the student as a notification.
 
-## 6. Application rules
+## 7. Application rules
 
-A student can apply to a company only if **all** of these hold (checked on the server):
+The server checks all of these when a student applies:
 
-| Rule | Error |
+| Rule | Response |
 |---|---|
-| Company exists and is `active` | 404 / 400 |
-| The company is open to the student's branch | 403 |
-| The student has uploaded a resume | 400 |
-| The resume is **approved** by an admin | 400 |
-| The profile has skills filled in | 400 |
-| They have not applied to this company before (unique index) | 400 |
+| The company exists and is `active` | 404 or 400 |
+| The company is open to the student's course | 403 |
+| A resume is uploaded | 400 |
+| The resume is `approved` (pending and rejected get different messages) | 400 |
+| The profile has skills | 400 |
+| The student has not applied to this company before (unique index) | 400 |
 
-## 7. Frontend structure
+## 8. Frontend structure
+
+There is no build step and no framework. Every page is plain HTML with a small script.
 
 | File | Responsibility |
 |---|---|
-| `js/utils.js` | Shared helpers: `esc()` (XSS-safe text), `openProtectedPdf()`, `initSidebar()`, `withLoading()`, `guarded()`, `showLoadError()` |
-| `js/home.js` | Landing page: navbar, scroll effects, counters |
-| `js/login.js` | Login / registration, role-specific login modes |
-| `js/student-dashboard.js` | Student sections: dashboard, companies, profile, resume, status, calendar, notifications |
-| `js/admin-dashboard.js` | Admin sections: dashboard (charts), companies, students, resumes, calendar |
+| `js/utils.js` | Shared helpers: `esc()` (escapes text for HTML), date helpers, `withLoading()` and `guarded()` (spinner and error toast around a task), `showLoadError()`, `initSidebar()`, `openProtectedPdf()` |
+| `js/dashboard.js` | Shared by both dashboards: login check (`requireRole`), `apiFetch()`, toasts, sidebar navigation with URL hash, option lists from `/public/meta`, multi-tab session sync |
+| `js/home.js` | Landing page: navigation, real statistics from `/public/stats` |
+| `js/login.js` | Login and registration forms |
+| `js/student-dashboard.js` | Dashboard, companies, profile, resume (upload and scan), status timeline, calendar, notifications |
+| `js/admin-dashboard.js` | Dashboard (charts), companies and applications, students, resumes, calendar |
 
-Pages are plain HTML; dynamic content is rendered with template strings where **every** user- or admin-entered value goes through `esc()`. Layout uses a fixed sidebar on desktop and a top bar with a slide-in drawer below 993 px.
+Conventions used in the page scripts:
+
+- One `state` object per page holds the data; `render…()` functions turn it into HTML.
+- Every user- or admin-entered value goes through `esc()` before it enters a template string.
+- Buttons carry `data-action` attributes and one delegated click listener dispatches them, so the pages need no inline scripts or `onclick` attributes and the CSP can forbid them.
+- Sections are `hidden` attribute toggles driven by the URL hash (`#companies`), so a refresh or a shared link stays on the same section.
+- The layout is a fixed sidebar on desktop and a top bar with a slide-in menu below 993 px.
