@@ -8,7 +8,7 @@ const API = '/api';
 
 async function apiFetch(endpoint, options = {}) {
     const token = localStorage.getItem('token');
-    if (!token) { logout(); return; }
+    if (!token) { logout(); throw new Error(SESSION_EXPIRED); }
     const isFormData = options.body instanceof FormData;
     const headers = {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
@@ -16,7 +16,8 @@ async function apiFetch(endpoint, options = {}) {
         ...options.headers
     };
     const res = await fetch(API + endpoint, { ...options, headers });
-    if (res.status === 401) { logout(); return; }
+    // Throw (not return undefined) so callers never crash on `res.data` while the redirect happens
+    if (res.status === 401) { logout(); throw new Error(SESSION_EXPIRED); }
     let data;
     try { data = await res.json(); } catch (e) { throw new Error('Server returned an unexpected response'); }
     if (!res.ok) throw new Error(data.message || 'Request failed');
@@ -39,8 +40,10 @@ function showNotification(message, type = 'success') {
 }
 
 // ── auth guard ────────────────────────────────────────────────
-const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-if (!currentUser || currentUser.role !== 'admin') { logout(); }
+let currentUser = null;
+try { currentUser = JSON.parse(localStorage.getItem('currentUser')); } catch { /* corrupt storage = logged out */ }
+const authorized = !!currentUser && currentUser.role === 'admin';
+if (!authorized) logout();
 
 // ── in-memory state ───────────────────────────────────────────
 let allStudents    = [];
@@ -67,11 +70,11 @@ document.querySelectorAll('.nav-link').forEach(link => {
             document.getElementById('section-title').textContent = this.textContent.trim();
         }
 
-        if      (section === 'dashboard') { await loadDashboard(); }
-        else if (section === 'students')  { await loadStudents(); }
-        else if (section === 'resumes')   { await loadResumes(); }
-        else if (section === 'calendar')  { await loadCalendar(); }
-        else if (section === 'companies') { await loadCompanies(); }
+        if      (section === 'dashboard') { await guarded(loadDashboard); }
+        else if (section === 'students')  { await guarded(loadStudents); }
+        else if (section === 'resumes')   { await guarded(loadResumes); }
+        else if (section === 'calendar')  { await guarded(loadCalendar); }
+        else if (section === 'companies') { await guarded(loadCompanies); }
     });
 });
 
@@ -590,7 +593,8 @@ async function init() {
         document.getElementById('section-title').textContent = 'Dashboard';
     } catch (err) {
         console.error('Init error:', err);
+        showLoadError('We could not load the dashboard. Please check your connection and try again.');
     }
 }
 
-init();
+if (authorized) withLoading(init);

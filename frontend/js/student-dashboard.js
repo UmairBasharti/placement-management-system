@@ -9,17 +9,21 @@ const API = '/api';
 // Fix #8: Handle non-JSON responses gracefully
 async function apiFetch(endpoint, options = {}) {
     const token = localStorage.getItem('token');
-    if (!token) { logout(); return; }
+    if (!token) { logout(); throw new Error(SESSION_EXPIRED); }
 
+    // Merge custom headers instead of letting them replace Authorization
+    const { headers: extraHeaders, ...rest } = options;
     const res = await fetch(API + endpoint, {
+        ...rest,
         headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-        },
-        ...options
+            Authorization: `Bearer ${token}`,
+            ...extraHeaders
+        }
     });
 
-    if (res.status === 401) { logout(); return; }
+    // Throw (not return undefined) so callers never crash on `res.data` while the redirect happens
+    if (res.status === 401) { logout(); throw new Error(SESSION_EXPIRED); }
 
     let data;
     try {
@@ -54,8 +58,10 @@ function showNotification(message, type = 'success') {
 }
 
 // ── auth guard ────────────────────────────────────────────────
-const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-if (!currentUser || currentUser.role !== 'student') { logout(); }
+let currentUser = null;
+try { currentUser = JSON.parse(localStorage.getItem('currentUser')); } catch { /* corrupt storage = logged out */ }
+const authorized = !!currentUser && currentUser.role === 'student';
+if (!authorized) logout();
 
 // In-memory state — fetched fresh from API on each section load
 let studentData = {};
@@ -80,13 +86,13 @@ document.querySelectorAll('.nav-link').forEach(link => {
             document.getElementById('section-title').textContent = this.textContent.trim();
         }
 
-        if      (section === 'dashboard')     { await loadDashboard(); }
-        else if (section === 'companies')      { await loadCompanies(); }
+        if      (section === 'dashboard')     { await guarded(loadDashboard); }
+        else if (section === 'companies')      { await guarded(loadCompanies); }
         else if (section === 'profile')        { renderProfile(); }
         else if (section === 'resume')         { renderResume(); }
-        else if (section === 'notifications')  { await loadNotifications(); }
-        else if (section === 'status')         { await loadStatusTimeline(); }
-        else if (section === 'calendar')       { await loadCalendar(); }
+        else if (section === 'notifications')  { await guarded(loadNotifications); }
+        else if (section === 'status')         { await guarded(loadStatusTimeline); }
+        else if (section === 'calendar')       { await guarded(loadCalendar); }
     });
 });
 
@@ -198,7 +204,7 @@ async function loadDashboard() {
 function renderRecentApplications() {
     const el = document.getElementById('recent-applications');
     if (!el) return;
-    const recent = [...myApplications].slice(-3).reverse();
+    const recent = myApplications.slice(0, 3);   // the API returns newest first
     el.innerHTML = recent.length ? recent.map(app => `
         <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
             <div>
@@ -330,9 +336,10 @@ document.getElementById('resume-form').addEventListener('submit', async function
             headers: { Authorization: `Bearer ${token}` },
             body: formData
         });
+        if (res.status === 401) { logout(); throw new Error(SESSION_EXPIRED); }
         let data;
         try { data = await res.json(); } catch (e) { throw new Error('Upload failed — unexpected server response'); }
-        if (!res.ok) throw new Error(data.message);
+        if (!res.ok) throw new Error(data.message || 'Upload failed');
 
         await fetchProfile();
         renderResume();
@@ -615,17 +622,17 @@ function updateStatusTimeline() {
 }
 
 // ── refresh helpers ───────────────────────────────────────────
-window.refreshApplications = async function () {
+window.refreshApplications = () => guarded(async () => {
     await fetchApplications();
     renderRecentApplications();
     showNotification('Applications refreshed!');
-};
+});
 
-window.refreshEvents = async function () {
+window.refreshEvents = () => guarded(async () => {
     await fetchEvents();
     renderUpcomingEvents();
     showNotification('Events refreshed!');
-};
+});
 
 // ── init ──────────────────────────────────────────────────────
 async function init() {
@@ -650,10 +657,11 @@ async function init() {
         await loadDashboard();
     } catch (err) {
         console.error('Init error:', err);
+        showLoadError('We could not load your dashboard. Please check your connection and try again.');
     }
 }
 
-init();
+if (authorized) withLoading(init);
 
 // Keyboard shortcut: Ctrl+F focuses company search
 document.addEventListener('keydown', function (e) {

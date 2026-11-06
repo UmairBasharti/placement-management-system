@@ -53,7 +53,7 @@ function showAlert(message, type = 'danger') {
  */
 function setLoading(button, isLoading) {
     button.disabled = isLoading;
-    button.classList.toggle('loading', isLoading);
+    button.classList.toggle('is-loading', isLoading);   // NOT "loading": that class is the global full-screen overlay (display:none)
 }
 
 // ── Admin mode detection ──────────────────────────────────────

@@ -147,7 +147,7 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 
 ### F1 🟠 [V] "Recent Applications" shows the 3 *oldest*
 - [student-dashboard.js:215](frontend/js/student-dashboard.js#L215) — the API is already newest-first; `.slice(-3).reverse()` takes the tail. → `.slice(0, 3)`.
-- [ ] Done when: the newest 3 show, newest first.
+- [x] Done when: the newest 3 show, newest first. — **DONE 2026-11-06 (commit "F1/F3/F4/F5")**: `slice(0, 3)` (API is newest-first); verified Newest Co > Second Co > Third Co.
 
 ### F2 🟠 [V] Calendar "Add / Remove" buttons break on apostrophes and newlines
 - [student-dashboard.js:493-506](frontend/js/student-dashboard.js#L493): an event titled `Alumni's Meet` → `SyntaxError: missing ) after argument list`; the button is dead. Fix via data-attributes + delegation (S1); reference events by `_id` (see B15).
@@ -155,17 +155,17 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 
 ### F3 🟠 [V] Login/Register button vanishes while loading
 - `setLoading` adds the class `loading` ([login.js:56](frontend/js/login.js#L56)), which collides with the global overlay rule `.loading { display:none; position:fixed; … }` ([common.css:149](frontend/css/common.css#L149)). Computed `display` = `none`, so the spinner never shows. → rename to `is-loading` / `btn-loading`.
-- [ ] Done when: the spinner is visible during the request.
+- [x] Done when: the spinner is visible during the request. — **DONE 2026-11-06 (commit "F1/F3/F4/F5")**: class renamed to `is-loading` (HTML/JS/CSS); verified the button stays `inline-block` with its 24px spinner while loading.
 
 ### F4 🟠 [V] No loading / error states anywhere
 - With the API down: the student page shows **Dashboard and Profile sections stacked** (profile-section has no initial `display:none`, [student-dashboard.html:226](frontend/student-dashboard.html#L226)); the admin page is silent; errors go only to `console`. `#loadingOverlay` is never toggled.
 - Fix: hide all sections except dashboard in the HTML; wrap every loader in try/catch → toast + inline retry; show the overlay or skeletons while loading.
-- [ ] Done when: blocking `fetch` shows a friendly error and only one section.
+- [x] Done when: blocking `fetch` shows a friendly error and only one section. — **DONE 2026-11-06 (commit "F1/F3/F4/F5")**: profile section hidden at load; new shared `withLoading` (spinner only after 300 ms), `guarded` (loader errors → toast instead of unhandled rejections) and `showLoadError` (banner + Retry) in `utils.js`; admin page got the missing overlay element. Verified: API down → one section + banner with Retry, nav failure → toast, slow API → spinner shows, no stuck overlay.
 
 ### F5 🟠 [C] `apiFetch` returns `undefined` on 401 → TypeErrors
 - [admin-dashboard.js:11,19](frontend/js/admin-dashboard.js#L19) / [student-dashboard.js:12,22](frontend/js/student-dashboard.js#L22): after `logout()` the function returns `undefined`, so `res.data` throws. The auth guard ([admin:43](frontend/js/admin-dashboard.js#L43), [student:58](frontend/js/student-dashboard.js#L58)) calls `logout()` but the script keeps running; `JSON.parse` of corrupt storage throws. Nav click handlers have no try/catch (unhandled rejections).
 - Fix: throw a sentinel after redirect; `return` after the guard; wrap `JSON.parse` in try/catch.
-- [ ] Done when: an expired token cleanly redirects with no console errors.
+- [x] Done when: an expired token cleanly redirects with no console errors. — **DONE 2026-11-06 (commit "F1/F3/F4/F5")**: `apiFetch` now throws a friendly SESSION_EXPIRED error after redirecting (no more `res.data` TypeErrors), corrupt `currentUser` JSON is caught, wrong-role access redirects and clears the session, resume upload handles 401, student `apiFetch` merges custom headers instead of replacing Authorization. Verified 5 cases: expired token (student+admin), corrupt storage, student on admin page, admin on student page → all end on the home page with credentials cleared and no unexpected console errors.
 
 ### F6 🟡 [C] Profile completion is misleading
 - [student-dashboard.js:132](frontend/js/student-dashboard.js#L132): name and course are always set at registration → 40% baseline; "Personal Information" / "Course Details" are always ticked; projects are not counted.

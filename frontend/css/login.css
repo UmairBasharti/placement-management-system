@@ -202,14 +202,14 @@ form { width: 100%; }
     transform: translateY(0);
 }
 
-.btn.loading {
+.btn.is-loading {
     color: transparent;
     background: #bd0745;
     pointer-events: none;
     animation: pulse 1.5s ease-in-out infinite;
 }
 
-.btn.loading::after {
+.btn.is-loading::after {
     content: '';
     position: absolute;
     width: 24px;
