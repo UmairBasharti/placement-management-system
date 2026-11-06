@@ -101,7 +101,7 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 - `.env` holds a real-looking `JWT_SECRET` → rotate it; add `backend/.env.example` with placeholders.
 - [auth.routes.js:11](backend/routes/auth.routes.js#L11) / [auth.middleware.js:20](backend/middleware/auth.middleware.js#L20): fail fast at startup if `JWT_SECRET` / `MONGODB_URI` are missing.
 - [seed.js:40](backend/seed.js#L40) defaults the admin password to `admin123`, and the README advertises it → fine for a demo, but label it "demo credentials" and require `ADMIN_SEED_PASSWORD` in production.
-- [ ] **Done when:** the server refuses to start without `JWT_SECRET`; `.env.example` exists; the real `.env` is untracked.
+- [x] **Done when:** the server refuses to start without `JWT_SECRET`; `.env.example` exists; the real `.env` is untracked. — **DONE 2026-11-06 (commit "S8")**: `backend/config/validateEnv.js` (required vars; weak/placeholder secret → warn in dev, refuse in production), `backend/.env.example`, localhost DB fallback removed, production seed requires `ADMIN_SEED_PASSWORD`, local `JWT_SECRET` rotated (96 hex chars; everyone must log in again). Tested: missing secret/URI → exit 1, prod + weak secret → exit 1, prod seed without password → exit 1, normal start + admin login OK.
 
 ### S9 ⚪ [C] Token storage / session model
 - 24h JWT in `localStorage`, no revocation, no refresh. Acceptable for a portfolio **after S1**; document it as a known trade-off (or move to an httpOnly cookie + CSRF protection).

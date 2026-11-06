@@ -11,9 +11,15 @@ if (process.env.DNS_SERVERS) {
     require('dns').setServers(process.env.DNS_SERVERS.split(',').map(s => s.trim()));
 }
 
+require('./config/validateEnv')(['MONGODB_URI']);
+if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_SEED_PASSWORD) {
+    console.error('❌ Set ADMIN_SEED_PASSWORD before seeding in production (the demo default is public).');
+    process.exit(1);
+}
+
 const seed = async () => {
     try {
-        await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/placement_management_system');
+        await mongoose.connect(process.env.MONGODB_URI);
         console.log('Connected to MongoDB');
 
         // Fix #16: Check for existing data before clearing

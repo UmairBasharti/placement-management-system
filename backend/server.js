@@ -13,6 +13,8 @@ if (process.env.DNS_SERVERS) {
     require('dns').setServers(process.env.DNS_SERVERS.split(',').map(s => s.trim()));
 }
 
+require('./config/validateEnv')(['MONGODB_URI', 'JWT_SECRET']);
+
 const app = express();
 
 // Ensure uploads directory exists at startup
@@ -48,7 +50,7 @@ app.use('/api/admin',        adminRoutes);
 app.use('/api/events',       eventRoutes);
 
 // MongoDB Connection — Mongoose 7+ does not need deprecated options
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/placement_management_system')
+mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('✅ Connected to MongoDB'))
     .catch(err => console.error('❌ MongoDB connection error:', err));
 
