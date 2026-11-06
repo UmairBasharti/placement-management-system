@@ -33,7 +33,7 @@ router.post('/register', [
 
         const { name, email, password, branch } = req.body;
 
-        // Fix #3: Public registration always creates a student — never an admin
+        // Public registration always creates a student — never an admin
         const role = 'student';
 
         // Check duplicate email
@@ -53,7 +53,7 @@ router.post('/register', [
             throw err;
         }
 
-        // Fix #4: Don't return JWT — user must explicitly log in
+        // Don't return JWT — user must explicitly log in
         res.status(201).json({
             success: true,
             message: 'Registration successful! Please log in.'

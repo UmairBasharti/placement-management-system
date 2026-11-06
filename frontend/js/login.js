@@ -125,7 +125,7 @@ if (registerForm) {
         }
 
         try {
-            // Fix #3: role is always 'student' — backend enforces it too
+            // role is always 'student' — backend enforces it too
             await apiFetch('/auth/register', {
                 method: 'POST',
                 body: JSON.stringify({ name, email, password, role: 'student', branch })
@@ -161,7 +161,7 @@ loginForm.addEventListener('submit', async (e) => {
 
         const userRole = data.user.role;
 
-        // ── Fix #1 + #5: Role enforcement BEFORE showing any success ──
+        // ── Role enforcement BEFORE showing any success ──
         //
         // Admin login page (?admin=true) → only admin can log in
         // Student login page (no param)  → only student can log in

@@ -3,10 +3,10 @@
 //  Fixes applied: #1 #2 #7 #8 #11
 // ═══════════════════════════════════════════════════════════════
 
-// Fix #1: Use relative URL instead of hardcoded localhost
+// Relative URL: works on any host/port
 const API = '/api';
 
-// Fix #8: Handle non-JSON responses gracefully
+// Handle non-JSON responses gracefully
 async function apiFetch(endpoint, options = {}) {
     const token = localStorage.getItem('token');
     if (!token) { logout(); throw new Error(SESSION_EXPIRED); }
@@ -39,7 +39,7 @@ async function apiFetch(endpoint, options = {}) {
 function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('currentUser');
-    window.location.href = 'index.html'; // Fix #6: Redirect to home page instead of login
+    window.location.href = 'index.html'; // back to the home page
 }
 
 function showNotification(message, type = 'success') {
@@ -69,7 +69,7 @@ let allCompanies = [];
 let myApplications = [];
 let allEvents = [];
 
-// ── navigation (Fix #7 & #11: added status + calendar handlers) ──
+// ── navigation ──
 document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', async function (e) {
         e.preventDefault();
@@ -120,7 +120,7 @@ async function fetchEvents() {
     allEvents = res.data;
 }
 
-// ── Fix #2: profile completion calculation ────────────────────
+// ── profile completion calculation ────────────────────
 function calculateProfileCompletion() {
     const fields = [studentData.name, studentData.course, studentData.skills,
                     studentData.education, studentData.resume && studentData.resume.path];
@@ -294,7 +294,6 @@ function updateResumePreview() {
     if (!el) return;
     const r = studentData.resume;
     if (r && r.path) {
-        // Fix #1: use relative path instead of localhost
         el.innerHTML = `
             <div class="d-flex flex-column align-items-center justify-content-center h-100">
                 <i class="fas fa-file-pdf fa-3x mb-3" style="color:var(--primary-color)"></i>
@@ -481,7 +480,7 @@ document.getElementById('search-company')?.addEventListener('input', displayComp
 document.getElementById('filter-job-type')?.addEventListener('change', displayCompanies);
 document.getElementById('filter-branch')?.addEventListener('change', displayCompanies);
 
-// ── events / calendar (Fix #11: now reachable from nav) ───────
+// ── events / calendar ───────
 async function loadCalendar() {
     await Promise.all([fetchEvents(), fetchProfile()]);
     updateCalendar();
@@ -601,7 +600,7 @@ async function loadNotifications() {
         </div>`).join('') : '<div class="alert alert-secondary">No notifications yet</div>';
 }
 
-// ── status timeline (Fix #7: now reachable) ───────────────────
+// ── status timeline ───────────────────
 async function loadStatusTimeline() {
     await fetchProfile();
     updateStatusTimeline();

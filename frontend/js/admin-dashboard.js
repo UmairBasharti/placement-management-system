@@ -3,7 +3,7 @@
 //  Fixes applied: #1 #5 #10 #12 #13 #14
 // ═══════════════════════════════════════════════════════════════
 
-// Fix #1: Use relative URL instead of hardcoded localhost
+// Relative URL: works on any host/port
 const API = '/api';
 
 async function apiFetch(endpoint, options = {}) {
@@ -27,7 +27,7 @@ async function apiFetch(endpoint, options = {}) {
 function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('currentUser');
-    window.location.href = 'index.html'; // Fix #6: Redirect to home page instead of login
+    window.location.href = 'index.html'; // back to the home page
 }
 
 function showNotification(message, type = 'success') {
@@ -139,7 +139,7 @@ function updateCharts(statusMap, branchMap) {
     });
 }
 
-// Fix #10: correct icon for application activity type
+// Icon per activity type
 function updateActivities(activities) {
     const el = document.getElementById('recent-activities');
     if (!el) return;
@@ -240,7 +240,7 @@ document.getElementById('export-data')?.addEventListener('click', async function
     a.click();
 });
 
-// ── resumes (Fix #12: reject button always enabled) ───────────
+// ── resumes ───────────
 async function loadResumes() {
     const res = await apiFetch('/admin/resumes');
     const el = document.getElementById('resumes-list');
@@ -329,7 +329,6 @@ function displayCompanies() {
         return 0;
     });
 
-    // Fix #5: delete button now uses delete-btn class (red) instead of approve-btn (green)
     el.innerHTML = filtered.map(c => `
         <div class="company-card">
             <div class="d-flex align-items-start">
@@ -426,7 +425,6 @@ window.showAddCompanyForm = function () {
     document.querySelector('#company-form button[type="submit"]').textContent = 'Add Company';
 };
 
-// Fix #13: company-logo field removed from payload (model has no logo field)
 document.getElementById('company-form')?.addEventListener('submit', async function (e) {
     e.preventDefault();
     const branches = [];

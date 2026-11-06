@@ -22,7 +22,7 @@ const seed = async () => {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('Connected to MongoDB');
 
-        // Fix #16: Check for existing data before clearing
+        // Check for existing data before clearing
         const existingUsers = await User.countDocuments();
         if (existingUsers > 0) {
             console.log(`⚠️  Database already has ${existingUsers} users.`);
@@ -47,7 +47,7 @@ const seed = async () => {
         console.log('Cleared existing data');
 
         // Admin user — no Student profile needed
-        // Fix #14: Read password from env so it's not visible in source
+        // Read password from env so it's not visible in source
         const adminPassword = process.env.ADMIN_SEED_PASSWORD || 'admin123';
         await User.create({
             name: 'Admin',

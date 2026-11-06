@@ -369,7 +369,7 @@ body {
     color: white;
 }
 
-/* Fix #5: Dedicated delete button style (was using approve-btn) */
+/* Delete button (red) */
 .delete-btn {
     background: #f44336;
     color: white;

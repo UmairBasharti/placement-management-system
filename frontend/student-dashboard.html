@@ -39,11 +39,9 @@
                     <a class="nav-link" href="#" data-section="resume">
                         <i class="fas fa-file-alt"></i> Resume
                     </a>
-                    <!-- Fix #7: Status nav link added -->
                     <a class="nav-link" href="#" data-section="status">
                         <i class="fas fa-chart-line"></i> Status
                     </a>
-                    <!-- Fix #11: Calendar nav link added -->
                     <a class="nav-link" href="#" data-section="calendar">
                         <i class="fas fa-calendar"></i> Calendar
                     </a>
@@ -74,7 +72,6 @@
                                 <div class="card-body">
                                     <h5 class="card-title">Placement Status</h5>
                                     <div class="d-flex align-items-center">
-                                        <!-- Fix #2: use ID for JS targeting instead of broken template literal -->
                                         <div id="dash-status-badge" class="status-badge status-unplaced me-3">
                                             <i class="fas fa-circle"></i> Loading...
                                         </div>
@@ -103,7 +100,6 @@
                                     <h5 class="card-title">Applications</h5>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <!-- Fix #2: proper ID instead of broken template literal -->
                                             <h3 id="app-total-count" class="mb-0">0</h3>
                                             <small class="text-muted">Total Applications</small>
                                         </div>
@@ -115,7 +111,6 @@
                                     </div>
                                     <div class="mt-3">
                                         <div class="d-flex justify-content-between mb-1">
-                                            <!-- Fix #2: proper IDs for JS targeting -->
                                             <small id="app-pending-label" class="text-warning">
                                                 <i class="fas fa-clock"></i> Pending: 0
                                             </small>
@@ -147,7 +142,6 @@
                                         <div class="progress-bar" id="profile-progress-bar" role="progressbar"></div>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <!-- Fix #2: proper ID, no broken function call -->
                                         <small id="profile-completion-pct" class="text-muted">0% Complete</small>
                                         <button class="btn btn-sm btn-outline-primary" onclick="document.querySelector('.nav-link[data-section=\'profile\']').click()">
                                             Complete Profile
@@ -155,7 +149,6 @@
                                     </div>
                                     <div class="mt-3">
                                         <ul class="list-unstyled mb-0">
-                                            <!-- Fix #2: proper IDs for JS checklist updates -->
                                             <li class="mb-1">
                                                 <i id="check-personal" class="fas fa-times-circle text-danger me-2"></i>
                                                 Personal Information
@@ -240,7 +233,7 @@
                                         <input type="email" class="form-control" id="profile-email" readonly>
                                     </div>
                                 </div>
-                                <!-- Fix #6: Course is readonly (set at registration, backend doesn't update it) -->
+                                <!-- Course is read-only (set at registration) -->
                                 <div class="mb-3">
                                     <label class="form-label">Course</label>
                                     <input type="text" class="form-control" id="profile-course" readonly>
@@ -270,7 +263,7 @@
                             <h5 class="card-title">Upload Resume</h5>
                             <form id="resume-form">
                                 <div class="mb-3">
-                                    <!-- Fix #4: only accept PDF to match backend -->
+                                    <!-- PDF only (matches the backend) -->
                                     <label class="form-label">Select Resume (PDF only)</label>
                                     <input type="file" class="form-control" id="resume-file" accept=".pdf">
                                 </div>
@@ -302,7 +295,6 @@
                             <select class="form-select" id="filter-job-type">
                                 <option value="">All Job Types</option>
                                 <option value="Full Time">Full Time</option>
-                                <!-- Fix #14: Part Time option added -->
                                 <option value="Part Time">Part Time</option>
                                 <option value="Internship">Internship</option>
                             </select>
