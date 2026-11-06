@@ -1,25 +1,24 @@
 <div align="center">
 
-<img src="frontend/assets/Hiray%20logo.png" alt="Dr. B.V. Hiray College logo" width="110">
+<img src="docs/assets/hero.png" alt="Placement Management System: student and admin dashboards" width="100%">
 
-# Placement Management System
+<br>
 
-**A full-stack campus placement portal: students upload a resume, get jobs ranked by skill match and apply; the placement cell reviews resumes, manages companies and tracks every application.**
+<img src="https://img.shields.io/badge/NODE.JS-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="NODE.JS"> <img src="https://img.shields.io/badge/EXPRESS-000000?style=for-the-badge&logo=express&logoColor=white" alt="EXPRESS"> <img src="https://img.shields.io/badge/MONGODB-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MONGODB"> <img src="https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white" alt="JWT">
 
-[![CI](https://github.com/UmairBasharti/placement-management-system/actions/workflows/ci.yml/badge.svg)](https://github.com/UmairBasharti/placement-management-system/actions/workflows/ci.yml)
-![Node.js](https://img.shields.io/badge/Node.js-20.19%2B-339933?logo=node.js&logoColor=white)
-![Express](https://img.shields.io/badge/Express-4-000000?logo=express&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-Atlas%20%7C%20GridFS-47A248?logo=mongodb&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-F7DF1E?logo=javascript&logoColor=black)
-![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3?logo=bootstrap&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-blue)
+<img src="https://img.shields.io/badge/JAVASCRIPT-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JAVASCRIPT"> <img src="https://img.shields.io/badge/BOOTSTRAP-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white" alt="BOOTSTRAP"> <img src="https://img.shields.io/badge/CHART.JS-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white" alt="CHART.JS"> <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5">
+
+<img src="https://img.shields.io/badge/GITHUB_ACTIONS-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GITHUB ACTIONS"> <img src="https://img.shields.io/badge/ESLINT-4B32C3?style=for-the-badge&logo=eslint&logoColor=white" alt="ESLINT"> <a href="https://github.com/UmairBasharti/placement-management-system/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/UmairBasharti/placement-management-system/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI" alt="CI status"></a> <img src="https://img.shields.io/badge/LICENSE-MIT-blue?style=for-the-badge" alt="MIT license">
+
+<br>
+
+**A full-stack campus placement portal.** Students upload a resume, get jobs ranked by skill match and apply. The placement cell reviews resumes, manages companies and tracks every application.
+
+[Overview](#overview) · [What I implemented](#what-i-implemented) · [Product tour](#product-tour) · [Architecture](#architecture) · [Security](#security) · [Problems I encountered](#problems-i-encountered) · [Run it](#local-development) · [Docs](#documentation)
 
 </div>
 
-<p align="center">
-  <img src="docs/screenshots/student-dashboard.png" alt="Student dashboard with job recommendations" width="49%">
-  <img src="docs/screenshots/admin-dashboard.png" alt="Admin dashboard" width="49%">
-</p>
+---
 
 ## Overview
 
@@ -30,6 +29,16 @@ A college placement cell collects resumes, matches students to companies and kee
 **Placement cell (admin).** Reviews and approves resumes, manages companies (required skills, private notes, archive), sees the best-matching students for each job, accepts or rejects applications, sets placement statuses, publishes events and exports the student list as CSV.
 
 **Stack.** Node.js and Express 4, MongoDB (Mongoose 7, GridFS for resume files), JWT authentication, plain JavaScript with Bootstrap 5 and Chart.js on the front end. No build step. One process serves the pages and the API.
+
+<table align="center">
+  <tr>
+    <td align="center"><b>55</b><br><sub>unit tests</sub></td>
+    <td align="center"><b>0</b><br><sub>vulnerable production dependencies</sub></td>
+    <td align="center"><b>~190</b><br><sub>skills the matcher recognises</sub></td>
+    <td align="center"><b>5</b><br><sub>screen widths checked for overflow</sub></td>
+    <td align="center"><b>1</b><br><sub>database for data and resume files</sub></td>
+  </tr>
+</table>
 
 ## What I implemented
 
@@ -45,61 +54,17 @@ A college placement cell collects resumes, matches students to companies and kee
 | **Responsive UI** | One flex layout for both dashboards, slide-in menu below 993 px; checked with no horizontal overflow at 1440, 1024, 820, 390 and 320 px | [`dashboard.css`](frontend/css/dashboard.css), [`dashboard.js`](frontend/js/dashboard.js) |
 | **Quality gates** | 55 unit tests with `node --test`, ESLint 9, GitHub Actions on Node 22 and 24, production `npm audit` | [`tests/`](backend/tests), [`ci.yml`](.github/workflows/ci.yml) |
 
-## Screenshots
+## Product tour
 
-| Student | Admin |
-|---|---|
-| ![Student companies](docs/screenshots/student-companies.png) | ![Admin companies](docs/screenshots/admin-companies.png) |
-| ![Resume scan](docs/screenshots/scan-dialog.png) | ![Company details with matching students](docs/screenshots/admin-company-details.png) |
-| ![Student calendar](docs/screenshots/student-calendar.png) | ![Resume review](docs/screenshots/admin-resumes.png) |
-| ![Student profile](docs/screenshots/student-profile.png) | ![Admin students](docs/screenshots/admin-students.png) |
-
-| Home | Login |
-|---|---|
-| ![Home](docs/screenshots/home-desktop.png) | ![Login](docs/screenshots/login-desktop.png) |
-
-**Phone and tablet**
-
-<p>
-  <img src="docs/screenshots/mobile-home.png" alt="Phone: home" width="19%">
-  <img src="docs/screenshots/mobile-login.png" alt="Phone: login" width="19%">
-  <img src="docs/screenshots/mobile-student.png" alt="Phone: student dashboard" width="19%">
-  <img src="docs/screenshots/mobile-student-menu.png" alt="Phone: menu" width="19%">
-  <img src="docs/screenshots/mobile-admin.png" alt="Phone: admin dashboard" width="19%">
-</p>
-<p>
-  <img src="docs/screenshots/tablet-admin.png" alt="Tablet: admin dashboard" width="40%">
-</p>
+<p align="center"><img src="docs/assets/showcase-student.png" alt="Student experience: ranked jobs, resume scan, calendar" width="100%"></p>
+<p align="center"><img src="docs/assets/showcase-admin.png" alt="Placement cell: best-matching students, resume review, student directory" width="100%"></p>
+<p align="center"><img src="docs/assets/responsive.png" alt="One layout on desktop, tablet and phone" width="100%"></p>
 
 > The screenshots use fictional data (eight students, six companies), a larger set than `npm run seed` creates.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph Client["Browser"]
-        P["Pages<br/>home · login · student · admin"]
-        J["Vanilla JS<br/>fetch() with Bearer token"]
-    end
-    subgraph Server["Node.js · Express"]
-        S["Security layer<br/>helmet (CSP) · CORS (closed) · rate limits"]
-        A["Auth middleware<br/>verify JWT · role check"]
-        R["Routes<br/>public · auth · students · companies<br/>applications · events · admin"]
-        V["Validation<br/>express-validator + Mongoose schemas"]
-        U["Utilities<br/>matcher · skills · resume parser<br/>placement-status rules · GridFS helpers"]
-        E["Central error handler"]
-    end
-    subgraph Data["MongoDB Atlas"]
-        M[("Collections<br/>users · students · companies<br/>applications · events · activities")]
-        F[("GridFS bucket<br/>resumes")]
-    end
-    P -- "static files" --> S
-    J -- "/api/* JSON" --> S
-    S --> A --> R --> V --> M
-    R --> U
-    U --> F
-    R -. "errors" .-> E
-```
+<p align="center"><img src="docs/assets/architecture.png" alt="Architecture: browser, Express server, MongoDB with GridFS, resume pipeline and CI" width="100%"></p>
 
 > Express serves both the pages and the API from one origin. That removes CORS set-up, gives a one-command start and allows a strict Content-Security-Policy (`connect-src 'self'`). Resumes live in the same database, so a host with no persistent disk still loses nothing. More diagrams (login flow, resume workflow, matching) are in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); the data model is in [`docs/DATABASE.md`](docs/DATABASE.md).
 
@@ -267,7 +232,8 @@ npm run lint
 
 The tests cover the placement-status rules, upload helpers, the error handler, the id check, the skill dictionary, the matcher, the resume parser (against generated PDFs) and the front-end escaping helper.
 
-### Troubleshooting
+<details>
+<summary><b>Troubleshooting</b></summary>
 
 | Symptom | Fix |
 |---|---|
@@ -279,6 +245,8 @@ The tests cover the placement-status rules, upload helpers, the error handler, t
 | "Too many failed login attempts" | 10 failures per 15 minutes per address; wait, or restart the server while developing |
 | A student cannot apply | They need skills on the profile and an **approved** resume; the company must be active and open to their course |
 | "This PDF has no readable text" | The resume is a scan or photo; export a text PDF or fill the profile by hand |
+
+</details>
 
 ## API
 
