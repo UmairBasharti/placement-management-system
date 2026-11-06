@@ -5,6 +5,7 @@ const Student = require('../models/student.model');
 const Company = require('../models/company.model');
 const Activity = require('../models/activity.model');
 const { protect, authorize } = require('../middleware/auth.middleware');
+const { afterApply, afterDecision } = require('../utils/placementStatus');
 
 // GET /api/applications/my — student: get own applications
 router.get('/my', protect, authorize('student'), async (req, res, next) => {
@@ -37,14 +38,25 @@ router.post('/', protect, authorize('student'), async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Company not found' });
         }
 
+        // Enforce: the company must be open and eligible for this student's branch
+        if (company.status !== 'active') {
+            return res.status(400).json({ success: false, message: 'This company is not accepting applications' });
+        }
+        if (!company.branches.includes(req.user.branch)) {
+            return res.status(403).json({ success: false, message: 'This opportunity is not open to your branch' });
+        }
+
         const student = await Student.findOne({ user: req.user._id });
         if (!student) {
             return res.status(404).json({ success: false, message: 'Student profile not found' });
         }
 
-        // Enforce: must have uploaded a resume
+        // Enforce: must have uploaded a resume, and the placement cell must have approved it
         if (!student.resume || !student.resume.path) {
             return res.status(400).json({ success: false, message: 'Please upload your resume before applying' });
+        }
+        if (!student.resume.approved) {
+            return res.status(400).json({ success: false, message: 'Your resume is waiting for approval by the placement cell — you can apply once it is approved' });
         }
 
         // Enforce: profile must have skills filled in
@@ -68,13 +80,16 @@ router.post('/', protect, authorize('student'), async (req, res, next) => {
             resumeName: student.resume.name
         });
 
-        // Update student placement status to "Under Review"
-        student.status = 'Under Review';
-        student.statusHistory.push({
-            status: 'Under Review',
-            message: `Applied to ${company.name}`,
-            timestamp: new Date()
-        });
+        // Unplaced → Under Review (never downgrade Interview Scheduled / Placed students)
+        const newStatus = afterApply(student.status);
+        if (newStatus !== student.status) {
+            student.status = newStatus;
+            student.statusHistory.push({
+                status: newStatus,
+                message: `Applied to ${company.name}`,
+                timestamp: new Date()
+            });
+        }
         student.notifications.push({
             message: `Your application to ${company.name} has been submitted`,
             timestamp: new Date()
@@ -110,35 +125,43 @@ router.put('/:id/status', protect, authorize('admin'), async (req, res, next) =>
         }
 
         const oldStatus = application.status;
+        if (oldStatus === status) {
+            return res.json({ success: true, message: `Application is already ${status.toLowerCase()}` });
+        }
         application.status = status;
         await application.save();
 
-        // Cascade status to the student's placement status
+        const companyName = application.company ? application.company.name : 'a removed company';
+
+        // Recompute the student's placement status from ALL of their applications
         const student = await Student.findById(application.student);
         if (student) {
-            if (status === 'Accepted') {
-                student.status = 'Placed';
-            } else if (status === 'Rejected' && oldStatus === 'Pending') {
-                student.status = 'Unplaced';
-            }
+            const applications = await Application.find({ student: student._id }).select('status');
+            const newStatus = afterDecision({ current: student.status, oldStatus, newStatus: status, applications });
 
             student.notifications.push({
-                message: `Your application to ${application.company.name} was ${status.toLowerCase()}`,
+                message: status === 'Pending'
+                    ? `Your application to ${companyName} was moved back to pending`
+                    : `Your application to ${companyName} was ${status.toLowerCase()}`,
                 timestamp: new Date()
             });
 
-            student.statusHistory.push({
-                status: student.status,
-                message: `Application to ${application.company.name}: ${status}`,
-                timestamp: new Date()
-            });
+            // The timeline records real placement-status changes only
+            if (newStatus !== student.status) {
+                student.status = newStatus;
+                student.statusHistory.push({
+                    status: newStatus,
+                    message: `Application to ${companyName}: ${status}`,
+                    timestamp: new Date()
+                });
+            }
 
             await student.save();
         }
 
         await Activity.create({
             type: 'status',
-            title: `Application ${status.toLowerCase()} for ${application.studentName} at ${application.company.name}`
+            title: `Application ${status.toLowerCase()} for ${application.studentName} at ${companyName}`
         });
 
         res.json({ success: true, message: `Application ${status.toLowerCase()} successfully` });
