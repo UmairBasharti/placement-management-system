@@ -13,7 +13,10 @@ body {
 .sidebar {
     background: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
     color: white;
-    min-height: 100vh;
+    top: 0;
+    bottom: 0;
+    overflow-y: auto;
+    z-index: 1000;
     width: var(--sidebar-width);
     position: fixed;
     left: 0;
@@ -66,11 +69,31 @@ body {
 
 /* ── Main Content ────────────────────────────────────────────── */
 
+/* Sidebar is fixed; the content fills the rest of the row (no width:100% + margin overflow) */
+.app-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Mobile top bar — only shown at <= 992px */
+.topbar {
+    display: none;
+}
+
 .main-content {
+    flex: 1 1 0;
+    min-width: 0;
     margin-left: var(--sidebar-width);
     padding: 2rem;
-    padding-bottom: 5rem; /* Fix #15: space for fixed footer */
+    padding-bottom: 2rem;
     transition: all 0.3s ease;
+}
+
+/* Long unbroken names/URLs wrap instead of pushing the layout wider. Bootstrap gives headings
+   overflow-wrap:break-word, which does not let flex items shrink — `anywhere` does.
+   Tables are excluded on purpose (they scroll sideways inside .table-responsive). */
+.main-content :is(h1, h2, h3, h4, h5, h6, p, small, span, div, label, li) {
+    overflow-wrap: anywhere;
 }
 
 /* ── Cards ────────────────────────────────────────────────────── */
@@ -364,11 +387,7 @@ body {
 
 /* Footer — dashboard-specific override (fixed + sidebar offset) */
 .footer {
-    position: fixed;
-    bottom: 0;
-    left: var(--sidebar-width);
-    right: 0;
-    transition: var(--transition);
+    margin-left: var(--sidebar-width);
 }
 
 /* ── Mobile Responsive ───────────────────────────────────────── */
@@ -381,6 +400,7 @@ body {
         width: 80%;
         max-width: 300px;
         height: 100vh;
+        height: 100dvh;
         z-index: 1000;
         transition: all 0.3s ease;
     }
@@ -392,7 +412,7 @@ body {
     .main-content {
         margin-left: 0;
         padding: 1rem;
-        padding-bottom: 5rem;
+        padding-bottom: 1.5rem;
     }
 
     .nav-link {
@@ -440,22 +460,34 @@ body {
         width: 100%;
     }
 
+    .topbar {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        position: sticky;
+        top: 0;
+        z-index: 900;
+        height: 56px;
+        padding: 0 1rem;
+        background: #fff;
+        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .topbar-title {
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
     .mobile-menu-toggle {
-        display: block;
-        position: fixed;
-        top: 1rem;
-        left: 1rem;
-        z-index: 1001;
-        background: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: 50%;
+        background: var(--primary-color);
+        color: #fff;
     }
 
     .sidebar-overlay {
@@ -474,7 +506,7 @@ body {
     }
 
     .footer {
-        left: 0;
+        margin-left: 0;
     }
 
     .company-filters {
@@ -495,11 +527,7 @@ body {
 @media (max-width: 576px) {
     .main-content {
         padding: 0.75rem;
-        padding-bottom: 5rem;
-    }
-
-    .card {
-        padding: 1rem;
+        padding-bottom: 1.5rem;
     }
 
     .form-control {
@@ -532,7 +560,7 @@ body {
 
     .main-content {
         padding: 0.75rem;
-        padding-bottom: 5rem;
+        padding-bottom: 1.5rem;
     }
 
     .card {

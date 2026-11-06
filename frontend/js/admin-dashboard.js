@@ -75,22 +75,8 @@ document.querySelectorAll('.nav-link').forEach(link => {
     });
 });
 
-// mobile sidebar
-const mobileToggle = document.createElement('button');
-mobileToggle.className = 'mobile-menu-toggle';
-mobileToggle.innerHTML = '<i class="fas fa-bars"></i>';
-document.body.appendChild(mobileToggle);
-const overlay = document.createElement('div');
-overlay.className = 'sidebar-overlay';
-document.body.appendChild(overlay);
-mobileToggle.addEventListener('click', () => {
-    document.querySelector('.sidebar').classList.toggle('active');
-    overlay.classList.toggle('active');
-});
-overlay.addEventListener('click', () => {
-    document.querySelector('.sidebar').classList.remove('active');
-    overlay.classList.remove('active');
-});
+// mobile sidebar (button + overlay live in the HTML; logic is shared in utils.js)
+initSidebar();
 
 // ── dashboard ─────────────────────────────────────────────────
 async function loadDashboard() {

@@ -395,11 +395,13 @@ form { width: 100%; }
 /* ── Responsive ──────────────────────────────────────────────── */
 
 @media screen and (max-width: 650px) {
-    .container { 
+    .container {
         height: 100vh;
+        height: 100dvh;
         margin: 0;
         border-radius: 0;
         width: 100%;
+        max-width: 100%;   /* the desktop calc(100% - 40px) would leave 20px gutters beside the full-width form */
     }
 
     .form-box {
@@ -732,6 +734,14 @@ form { width: 100%; }
     left: 0;
     right: 0;
     background: linear-gradient(90deg, #e2e2e2, #bd0745);
+}
+
+/* Phones / short windows: a fixed footer would sit on top of the bottom of the form
+   (it hid the Login button on 667px-tall screens), so don't show it there. */
+@media (max-width: 650px), (max-height: 700px) {
+    .footer {
+        display: none;
+    }
 }
 
 /* Submit button ripple */

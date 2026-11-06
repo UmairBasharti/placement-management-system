@@ -11,8 +11,16 @@
     <link rel="stylesheet" href="css/student-dashboard.css">
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
+    <!-- Mobile top bar (hidden on desktop) -->
+    <header class="topbar">
+        <button type="button" class="mobile-menu-toggle" id="mobile-menu-btn" aria-label="Open menu" aria-expanded="false">
+            <i class="fas fa-bars"></i>
+        </button>
+        <span class="topbar-title">PMS</span>
+    </header>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <div class="app-layout">
             <!-- Sidebar -->
             <div class="sidebar">
                 <h4 class="mb-4">PMS</h4>
@@ -44,14 +52,6 @@
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </a>
                 </nav>
-            </div>
-
-            <!-- Mobile Header (Hidden on Desktop) -->
-            <div class="mobile-header d-lg-none">
-                <button class="mobile-menu-toggle" id="mobile-menu-btn" aria-label="Toggle menu">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <h4 class="mb-0 ms-3 fw-bold">PMS</h4>
             </div>
 
             <!-- Main Content -->
@@ -341,7 +341,6 @@
                     </div>
                 </div>
             </div>
-        </div>
     </div>
 
     <!-- Loading Overlay -->

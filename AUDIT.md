@@ -112,32 +112,34 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 
 ## Phase 2 — Layout breakers (most visible in a demo)
 
+> **Layout work completed 2026-11-06** (R1, R2, R3, R8, R9, R11, R12, R13, R14, R15, R16, R17). Extra fixes found while testing: long unbroken text now wraps inside dashboards (`overflow-wrap:anywhere` on text elements — Bootstrap headings use `break-word`, which does not let flex items shrink), and the doubled card padding on phones (`.card` + `.card-body`) was removed. Verified with real headless-Chrome measurements at 1440/1024/820/390/320 on both dashboards, home and login.
+
 ### R1 🔴 [V] Student dashboard overflows horizontally on every desktop
 - **Cause:** `.main-content` is a child of Bootstrap `.row` → `.row > * { width:100% }` **plus** `margin-left:280px`. The page is 1720px wide at 1440; the right 280px (Profile Completion card etc.) is cut off.
 - **Where:** [student-dashboard.html:15-17,58](frontend/student-dashboard.html#L15), [student-dashboard.css:69](frontend/css/student-dashboard.css#L69).
 - **Fix:** drop `.container-fluid > .row` wrappers, or give `.main-content { width: auto; flex: 1; }` / `width: calc(100% - var(--sidebar-width))`.
-- [ ] **Done when:** `document.documentElement.scrollWidth === clientWidth` at 1440 and 1024.
+- [x] **Done when:** `document.documentElement.scrollWidth === clientWidth` at 1440 and 1024. — **DONE 2026-11-06 (commit "layout R1–R17")**: student dashboard no longer overflows: Bootstrap row/col wrappers replaced by `.app-layout` (flex) + `.main-content{flex:1;min-width:0}`. Verified scrollWidth == clientWidth at 1440, 1024, 820, 390, 320.
 
 ### R2 🔴 [V] Admin dashboard overflows on desktop and is 75% wide on tablet
 - **Cause:** `col-md-3 col-lg-2` / `col-md-9 col-lg-10` Bootstrap columns mixed with a fixed 280px sidebar and `margin-left:280px`. Overflows by 40px at 1440 and 109px at 1024; at 768–992px `col-md-9` keeps the content at 75% width (615 of 820px, empty right quarter).
 - **Where:** [admin-dashboard.html:18,43](frontend/admin-dashboard.html#L18), [admin-dashboard.css:69](frontend/css/admin-dashboard.css#L69).
 - **Fix:** remove the `col-*` classes; use the same layout as the fixed R1.
-- [ ] **Done when:** no horizontal scroll at 1440/1024 and the content is full width at 820.
+- [x] **Done when:** no horizontal scroll at 1440/1024 and the content is full width at 820. — **DONE 2026-11-06 (commit "layout R1–R17")**: admin dashboard: removed `col-md-*`/`col-lg-*` classes; full width at 820, no scroll at 1440/1024 (verified).
 
 ### R3 🟠 [V] Stray unstyled hamburger button at the bottom of both dashboards on desktop
 - **Cause:** JS always creates `.mobile-menu-toggle` ([admin-dashboard.js:79](frontend/js/admin-dashboard.js#L79), [student-dashboard.js:94](frontend/js/student-dashboard.js#L94)), but its CSS lives only inside `@media (max-width: 992px)`.
 - **Fix:** put the toggle in the HTML once with a base `display:none` rule; show it in the media query. Delete the dead `#mobile-menu-btn` / `.mobile-header` duplicate on the student page (R9).
-- [ ] **Done when:** nothing is visible below the footer at 1440.
+- [x] **Done when:** nothing is visible below the footer at 1440. — **DONE 2026-11-06 (commit "layout R1–R17")**: the JS-injected toggle is gone; one hamburger lives in a real mobile top bar (`.topbar`, hidden on desktop). Verified: 1 toggle, nothing below the footer.
 
 ### R11 🔴 [V] Home page: Login / Signup and Admin Login are unreachable on phones and tablets
 - **Cause:** `.navbar` has `backdrop-filter` ([home.css:14](frontend/css/home.css#L14)), which makes it the containing block for its `position:fixed` children → `.nav-actions { bottom: 2rem }` ([home.css:591](frontend/css/home.css#L591)) resolves against the 70px navbar → buttons sit at y = −72 (off-screen). Screenshot: "Admin Login" clipped at the top edge, "Login / Signup" invisible.
 - **Fix:** move `.nav-actions` *inside* the `.nav-menu` drawer as the last item, or move the blur to a `::before` pseudo-element so the navbar stops being a containing block.
-- [ ] **Done when:** both buttons are visible and tappable in the open drawer at 390 and 820.
+- [x] **Done when:** both buttons are visible and tappable in the open drawer at 390 and 820. — **DONE 2026-11-06 (commit "layout R1–R17")**: navbar blur moved to `::before` so the navbar is no longer the containing block of the fixed drawer. Verified: both buttons inside the viewport and visible at 390×844 (y 710–812) and 820×1180.
 
 ### R13 🟠 [V] Login button hidden behind the fixed footer on short phones
 - **Evidence:** at 390×667 (iPhone SE size) the hit-test on the Login button returns `.footer-content`; the footer is 139px tall and `position:fixed` ([login.css:729](frontend/css/login.css#L729)).
 - **Fix:** make the login footer static (or hide it under 700px tall); use `100dvh` instead of `100vh`.
-- [ ] **Done when:** the Login button is tappable at 390×667 and 320×568.
+- [x] **Done when:** the Login button is tappable at 390×667 and 320×568. — **DONE 2026-11-06 (commit "layout R1–R17")**: login footer hidden at ≤650px wide or ≤700px tall. Verified at 390×667 and 320×568: the Login button is the element hit when tapping it.
 
 ---
 
@@ -262,15 +264,15 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 - [ ] **R6 ⚪ [V]** The login register form scrolls inside its fixed 550px card on desktop (content 577px). → `min-height` instead of `height`, or tighter spacing.
 
 **Tablet (768–992)**
-- [ ] **R8 🟠 [V]** The fixed hamburger (top-left, 40px) covers the page title on both dashboards ("Dashboard" reads "shboard"). → a real top bar with the toggle, or `padding-left` on the header.
-- [ ] **R9 🟡 [V]** Student page has 2 overlapping hamburgers: HTML `#mobile-menu-btn` (no handler) + the JS-created one; the "PMS" label sits under them.
+- [x] **R8 🟠 [V]** The fixed hamburger (top-left, 40px) covers the page title on both dashboards ("Dashboard" reads "shboard"). → a real top bar with the toggle, or `padding-left` on the header. — **DONE 2026-11-06**: real top bar; page titles no longer covered (verified at 820/390).
+- [x] **R9 🟡 [V]** Student page has 2 overlapping hamburgers: HTML `#mobile-menu-btn` (no handler) + the JS-created one; the "PMS" label sits under them. — **DONE 2026-11-06**: the dead HTML hamburger and the JS-created duplicate were replaced by one wired button (`initSidebar()` in `utils.js`).
 
 **Mobile**
-- [ ] **R12 🟡 [V]** The closed home-page drawer's links are off-screen but still keyboard-focusable → `visibility:hidden` / `inert` when closed; add `aria-expanded` on the hamburger; close on outside click / Esc.
-- [ ] **R14 🟡 [V]** Login ≤650px: `.container` keeps `max-width: calc(100% - 40px)` → the red panel is inset 20px while the form sheet is full-bleed (misaligned gutters); `100vh` → `100dvh`.
-- [ ] **R15 🟠 [V]** Fixed dashboard footer is 147px tall at 390px (17% of 844, **32% of a 568px screen**) and hides the last 51–67px of content (`padding-bottom: 5rem` too small). → static footer on dashboards.
-- [ ] **R16 🟠 [V]** The open mobile sidebar is painted over by the footer (both z-index 1000, footer later in the DOM; overlay 999 sits below the footer). At 390×667 the footer covers **Logout**.
-- [ ] **R17 🟠 [V]** The sidebar and overlay stay open after tapping a nav link → close them in the nav click handler.
+- [x] **R12 🟡 [V]** The closed home-page drawer's links are off-screen but still keyboard-focusable → `visibility:hidden` / `inert` when closed; add `aria-expanded` on the hamburger; close on outside click / Esc. — **DONE 2026-11-06**: closed drawer is `visibility:hidden` (verified hidden,hidden) so keyboard users cannot tab into it. (aria-expanded / Esc / outside-click for the *home* drawer still open.)
+- [x] **R14 🟡 [V]** Login ≤650px: `.container` keeps `max-width: calc(100% - 40px)` → the red panel is inset 20px while the form sheet is full-bleed (misaligned gutters); `100vh` → `100dvh`. — **DONE 2026-11-06**: `.container{max-width:100%}` at ≤650px (container x=0, w=390 verified) and `100dvh` used.
+- [x] **R15 🟠 [V]** Fixed dashboard footer is 147px tall at 390px (17% of 844, **32% of a 568px screen**) and hides the last 51–67px of content (`padding-bottom: 5rem` too small). → static footer on dashboards. — **DONE 2026-11-06**: dashboard footers are in normal flow; verified content bottom == footer top (nothing hidden).
+- [x] **R16 🟠 [V]** The open mobile sidebar is painted over by the footer (both z-index 1000, footer later in the DOM; overlay 999 sits below the footer). At 390×667 the footer covers **Logout**. — **DONE 2026-11-06**: footer no longer overlaps; verified Logout is the element hit at 390×667 with the sidebar open.
+- [x] **R17 🟠 [V]** The sidebar and overlay stay open after tapping a nav link → close them in the nav click handler. — **DONE 2026-11-06**: sidebar/overlay now close on nav click, overlay click, Esc and when widening to desktop (all verified; `aria-expanded` kept in sync).
 - [ ] **R18 🟡 [V]** Admin company filters squashed (search 86px, selects 108px) — `.filter-group` has no wrap or mobile rule ([admin-dashboard.css:426](frontend/css/admin-dashboard.css#L426)).
 - [ ] **R19 ⚪ [V]** Admin Companies shows two headings ("Companies" + "Company Management").
 - [ ] **R20 🟡 [V]** Login branch `<select>` unstyled (Arial, native look): the page loads Bootstrap **JS** but not its CSS ([login.html:105](frontend/login.html#L105)) and uses `mb-3 form-label form-select`. → style it like `.input-box` and drop the unused Bootstrap JS.
