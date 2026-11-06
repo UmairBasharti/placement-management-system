@@ -10,7 +10,7 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 
 **Audit date:** 2026-11-06 · **Stack:** Node 25 / Express 4.22 / Mongoose 7.8 / Multer 1.4.5 / vanilla JS + Bootstrap 5.3
 **Baseline facts (at audit time):** all 20 JS files pass `node --check`; no git repo yet; MongoDB not installed locally; `frontend/assets/` was empty.
-**Progress since:** Atlas connected + seeded (0.2) · logo added (P1, partly) · dependencies updated, prod `npm audit` 0 vulns (S7) · CDN libs pinned with SRI (Phase 11) · B2 disproved. Still **no git repo** — item 0.1 is next.
+**Progress (2026-11-06) — Tier 1 is complete.** Done: git + secrets hygiene (0.1–0.3, S8) · all security items S1–S8 · layout R1–R17 + R4 · functional bugs F1–F5 · backend logic B1/B3–B13 · C1/C2 · P1 (logo + favicon) · C4 (partly: 25 unit tests) · D1–D3, D5 · dependency updates (prod `npm audit` = 0, Multer 2, helmet, rate-limit). **Open Tier 2/3:** remaining B items (B14–B23), F6–F14, remaining R/Q/P items, FEAT-1/2, cloud storage, deployment (D4).
 
 ---
 
@@ -307,12 +307,12 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 
 ## Phase 8 — Documentation & GitHub presentation
 
-- [ ] **D1** Rewrite the README: overview, features, **screenshots/GIF** (desktop + mobile), tech stack, architecture diagram, folder structure, setup (local + Atlas), env var table (`.env.example`), demo credentials, a complete API table (it's missing `PUT /me/notifications/read`, `POST /companies/:id/notes`), security notes (S9), known limitations, roadmap.
-- [ ] **D1b** README "Troubleshooting" section: `querySrv ECONNREFUSED` → set `DNS_SERVERS=8.8.8.8,1.1.1.1`; Atlas timeouts → add your current IP under Network Access (or try another network — some campus Wi-Fi blocks port 27017); `bad auth` → wrong DB user/password (URL-encode special characters); data appears in a `test` DB → the URI is missing the `/pms` database name.
-- [ ] **D2** Fix stale README facts: "Node 16+" → match `engines`; `node seed.js` behaviour after B20.
-- [ ] **D3** Add `LICENSE` (MIT), `.editorconfig`, `CONTRIBUTING.md` (optional).
-- [ ] **D4** Live demo (after C5) + link in the README and the GitHub "About" section; add repo topics.
-- [ ] **D5** Remove "Fix #N" comments scattered through the code (they refer to an old, unknown list) once this audit supersedes them.
+- [x] **D1** Rewrite the README: overview, features, **screenshots/GIF** (desktop + mobile), tech stack, architecture diagram, folder structure, setup (local + Atlas), env var table (`.env.example`), demo credentials, a complete API table (it's missing `PUT /me/notifications/read`, `POST /companies/:id/notes`), security notes (S9), known limitations, roadmap. — **DONE 2026-11-06**: new README (features, screenshots, tech stack, Mermaid architecture diagram, setup incl. Atlas steps, demo accounts, env-variable table, project tree, API overview, security, testing, troubleshooting, limitations/roadmap, docs index) plus `docs/ARCHITECTURE.md`, `DATABASE.md` (ER diagram), `API.md`, `USER_MANUAL.md`, `DEPLOYMENT.md` and 18 screenshots in `docs/screenshots/` (taken from the real frontend with demo data). All 6 Mermaid diagrams were rendered in Chrome with Mermaid 11 to prove they parse. _Not included:_ a demo GIF/video (record one yourself).
+- [x] **D1b** README "Troubleshooting" section: `querySrv ECONNREFUSED` → set `DNS_SERVERS=8.8.8.8,1.1.1.1`; Atlas timeouts → add your current IP under Network Access (or try another network — some campus Wi-Fi blocks port 27017); `bad auth` → wrong DB user/password (URL-encode special characters); data appears in a `test` DB → the URI is missing the `/pms` database name. — **DONE 2026-11-06**: Troubleshooting table in the README.
+- [x] **D2** Fix stale README facts: "Node 16+" → match `engines`; `node seed.js` behaviour after B20. — **DONE 2026-11-06**: README says Node 20.19+; seed behaviour documented (prompts before clearing, refuses default admin password in production).
+- [x] **D3** Add `LICENSE` (MIT), `.editorconfig`, `CONTRIBUTING.md` (optional). — **DONE 2026-11-06**: MIT `LICENSE` (holder = git user name), `.editorconfig`, `.gitattributes`. _(CONTRIBUTING.md skipped — optional.)_
+- [ ] **D4** Live demo (after C5) + link in the README and the GitHub "About" section; add repo topics. ⏳ **Still open:** needs your decision/accounts (hosting, GitHub repo, topics).
+- [x] **D5** Remove "Fix #N" comments scattered through the code (they refer to an old, unknown list) once this audit supersedes them. — **DONE 2026-11-06**: 36 history labels removed; useful explanations kept.
 
 ---
 
