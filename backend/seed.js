@@ -1,8 +1,13 @@
+// Fills the database with demo data:  npm run seed   (add --force to skip the confirmation question)
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const readline = require('readline');
 const User = require('./models/user.model');
 const Student = require('./models/student.model');
 const Company = require('./models/company.model');
+const Application = require('./models/application.model');
+const Event = require('./models/event.model');
+const Activity = require('./models/activity.model');
 
 dotenv.config();
 
@@ -12,126 +17,119 @@ if (process.env.DNS_SERVERS) {
 }
 
 require('./config/validateEnv')(['MONGODB_URI']);
-if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_SEED_PASSWORD) {
-    console.error('❌ Set ADMIN_SEED_PASSWORD before seeding in production (the demo default is public).');
+
+const production = process.env.NODE_ENV === 'production';
+if (production && !process.env.ADMIN_SEED_PASSWORD) {
+    console.error('Set ADMIN_SEED_PASSWORD before seeding in production (the demo default is public).');
     process.exit(1);
 }
 
-const seed = async () => {
-    try {
-        await mongoose.connect(process.env.MONGODB_URI);
-        console.log('Connected to MongoDB');
+const force = process.argv.includes('--force');
+const ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD || 'admin123';
 
-        // Check for existing data before clearing
-        const existingUsers = await User.countDocuments();
-        if (existingUsers > 0) {
-            console.log(`⚠️  Database already has ${existingUsers} users.`);
-            const readline = require('readline');
-            const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-            const answer = await new Promise(resolve => {
-                rl.question('Do you want to clear all data and re-seed? (y/N): ', resolve);
-            });
-            rl.close();
-            if (answer.toLowerCase() !== 'y') {
-                console.log('Seed cancelled.');
-                process.exit(0);
-            }
-        }
+// Local date-time string like the admin form produces, `days` from today
+function eventDate(days, hour, minute) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(hour)}:${pad(minute)}`;
+}
 
-        // Clear existing data
-        await Promise.all([
-            User.deleteMany({}),
-            Student.deleteMany({}),
-            Company.deleteMany({})
-        ]);
-        console.log('Cleared existing data');
+function ask(question) {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    return new Promise((resolve) => rl.question(question, (answer) => { rl.close(); resolve(answer); }));
+}
 
-        // Admin user — no Student profile needed
-        // Read password from env so it's not visible in source
-        const adminPassword = process.env.ADMIN_SEED_PASSWORD || 'admin123';
-        await User.create({
-            name: 'Admin',
-            email: 'admin@pms.com',
-            password: adminPassword,
-            role: 'admin'
-        });
-        console.log(`Created admin  →  admin@pms.com / ${adminPassword === 'admin123' ? 'admin123 (default — set ADMIN_SEED_PASSWORD env var to change)' : '****(from env)'}`);
-
-        // Student 1 — MCA
-        const user1 = await User.create({
-            name: 'Rahul Sharma',
-            email: 'rahul@pms.com',
-            password: 'student123',
-            role: 'student',
-            branch: 'MCA'
-        });
-        await Student.create({
-            user: user1._id,
-            skills: 'JavaScript, Node.js, MongoDB',
-            education: 'B.Sc Computer Science — 2022',
-            projects: 'Portfolio website, Todo app',
-            status: 'Unplaced'
-        });
-        console.log('Created student →  rahul@pms.com / student123');
-
-        // Student 2 — MBA
-        const user2 = await User.create({
-            name: 'Priya Patel',
-            email: 'priya@pms.com',
-            password: 'student123',
-            role: 'student',
-            branch: 'MBA'
-        });
-        await Student.create({
-            user: user2._id,
-            skills: 'Financial Analysis, MS Excel, Communication',
-            education: 'B.Com — 2022',
-            projects: 'Market research report, Financial model',
-            status: 'Unplaced'
-        });
-        console.log('Created student →  priya@pms.com / student123');
-
-        // Seed companies
-        await Company.insertMany([
-            {
-                name: 'Tech Solutions Inc.',
-                description: 'Leading technology company specialising in software development and IT services.',
-                location: 'Mumbai',
-                jobType: 'Full Time',
-                branches: ['MCA', 'MBA'],
-                requirements: 'Strong programming skills, problem-solving ability',
-                package: '8-12 LPA',
-                postedDate: new Date('2024-03-01')
-            },
-            {
-                name: 'Global Finance Corp',
-                description: 'International financial services company offering roles in finance and management.',
-                location: 'Delhi',
-                jobType: 'Internship',
-                branches: ['MBA'],
-                requirements: 'Financial analysis, communication skills',
-                package: '30-40k per month',
-                postedDate: new Date('2024-03-05')
-            },
-            {
-                name: 'Innovate Software',
-                description: 'Software development company focused on innovative solutions.',
-                location: 'Bangalore',
-                jobType: 'Full Time',
-                branches: ['MCA'],
-                requirements: 'Web development, database management',
-                package: '6-10 LPA',
-                postedDate: new Date('2024-03-10')
-            }
-        ]);
-        console.log('Seeded 3 companies');
-
-        console.log('\n✅ Seed complete. Run: cd backend && npm run dev');
-        process.exit(0);
-    } catch (error) {
-        console.error('Seed error:', error.message);
+async function confirmClearing() {
+    const existing = await User.countDocuments();
+    if (existing === 0 || force) return;
+    if (!process.stdin.isTTY) {
+        console.error(`The database already has ${existing} users. Run with --force to clear it and re-seed.`);
         process.exit(1);
     }
-};
+    const answer = await ask(`The database already has ${existing} users. Clear ALL data and re-seed? (y/N): `);
+    if (answer.trim().toLowerCase() !== 'y') {
+        console.log('Seed cancelled.');
+        process.exit(0);
+    }
+}
 
-seed();
+async function clearAll() {
+    const db = mongoose.connection.db;
+    await Promise.all([
+        User.deleteMany({}), Student.deleteMany({}), Company.deleteMany({}),
+        Application.deleteMany({}), Event.deleteMany({}), Activity.deleteMany({}),
+        db.collection('resumes.files').deleteMany({}), db.collection('resumes.chunks').deleteMany({})
+    ]);
+}
+
+async function createStudent({ name, email, branch, skills, education, projects }) {
+    const user = await User.create({ name, email, password: 'student123', role: 'student', branch });
+    await Student.create({ user: user._id, skills, education, projects });
+    console.log(`Created student: ${email} / student123 (${branch})`);
+}
+
+async function seed() {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('Connected to MongoDB');
+
+    await confirmClearing();
+    await clearAll();
+    console.log('Cleared existing data');
+
+    await User.create({ name: 'Admin', email: 'admin@pms.com', password: ADMIN_PASSWORD, role: 'admin' });
+    console.log(`Created admin: admin@pms.com / ${process.env.ADMIN_SEED_PASSWORD ? '(ADMIN_SEED_PASSWORD)' : 'admin123 (demo default)'}`);
+
+    await createStudent({
+        name: 'Rahul Sharma', email: 'rahul@pms.com', branch: 'MCA',
+        skills: 'JavaScript, Node.js, MongoDB',
+        education: 'B.Sc Computer Science — 2022',
+        projects: 'Portfolio website, Todo app'
+    });
+    await createStudent({
+        name: 'Priya Patel', email: 'priya@pms.com', branch: 'MBA',
+        skills: 'Financial Analysis, MS Excel, Communication',
+        education: 'B.Com — 2022',
+        projects: 'Market research report, Financial model'
+    });
+
+    await Company.insertMany([
+        {
+            name: 'Tech Solutions Inc.', location: 'Mumbai', jobType: 'Full Time', branches: ['MCA', 'MBA'],
+            description: 'Technology company specialising in software development and IT services.',
+            requirements: 'JavaScript, Node.js, SQL, problem solving',
+            requiredSkills: ['JavaScript', 'Node.js', 'SQL', 'Problem Solving'],
+            package: '8-12 LPA', postedDate: new Date(Date.now() - 12 * 86400000)
+        },
+        {
+            name: 'Global Finance Corp', location: 'Delhi', jobType: 'Internship', branches: ['MBA'],
+            description: 'Financial services company offering internships in research, risk and client management.',
+            requirements: 'Financial analysis, MS Excel, communication skills',
+            requiredSkills: ['Financial Analysis', 'Excel', 'Communication'],
+            package: '30-40k per month', postedDate: new Date(Date.now() - 8 * 86400000)
+        },
+        {
+            name: 'Innovate Software', location: 'Bangalore', jobType: 'Full Time', branches: ['MCA'],
+            description: 'Product company building web tools for small businesses.',
+            requirements: 'React, Node.js, MongoDB, REST APIs, Git',
+            requiredSkills: ['React', 'Node.js', 'MongoDB', 'REST APIs', 'Git'],
+            package: '6-10 LPA', postedDate: new Date(Date.now() - 4 * 86400000)
+        }
+    ]);
+    console.log('Created 3 companies');
+
+    await Event.insertMany([
+        { title: 'Campus Drive: Tech Solutions Inc.', date: eventDate(3, 10, 0), description: 'Aptitude test followed by technical interviews.' },
+        { title: 'Resume Workshop', date: eventDate(6, 14, 30), description: 'How to write a one-page resume. Bring a printed copy.' }
+    ]);
+    console.log('Created 2 events');
+
+    console.log('\nSeed complete. Start the app with: npm run dev');
+}
+
+seed()
+    .then(() => process.exit(0))
+    .catch((error) => {
+        console.error('Seed error:', error.message);
+        process.exit(1);
+    });

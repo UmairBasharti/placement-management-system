@@ -80,6 +80,7 @@ app.get('/api/health', (req, res) => {
     res.status(dbUp ? 200 : 503).json({ status: dbUp ? 'ok' : 'degraded', database: dbUp ? 'connected' : 'disconnected', uptime: Math.round(process.uptime()) });
 });
 
+app.use('/api/public',       require('./routes/public.routes'));
 app.use('/api/auth',         require('./routes/auth.routes'));
 app.use('/api/students',     require('./routes/student.routes'));
 app.use('/api/companies',    require('./routes/company.routes'));

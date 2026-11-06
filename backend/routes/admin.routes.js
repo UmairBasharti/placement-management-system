@@ -6,6 +6,7 @@ const Company = require('../models/company.model');
 const Activity = require('../models/activity.model');
 const { protect, authorize } = require('../middleware/auth.middleware');
 const { sendResumeFile } = require('../utils/fileUpload');
+const { matchStudents } = require('../utils/matcher');
 
 const router = express.Router();
 router.use(protect, authorize('admin'));
@@ -168,6 +169,35 @@ function reviewResume(decision) {
 
 router.put('/resumes/:id/approve', reviewResume('approved'));
 router.put('/resumes/:id/reject', reviewResume('rejected'));
+
+// GET /api/admin/companies/:id/matches — students (of eligible branches) whose skills fit this job best
+router.get('/companies/:id/matches', async (req, res, next) => {
+    try {
+        const company = await Company.findById(req.params.id);
+        if (!company) {
+            return res.status(404).json({ success: false, message: 'Company not found' });
+        }
+
+        const students = await Student.find().populate('user', 'name email branch');
+        const eligible = students.filter((s) => s.user && company.branches.includes(s.user.branch));
+
+        const data = matchStudents(company, eligible).map((r) => ({
+            studentId: r.student._id,
+            name: r.student.user.name,
+            email: r.student.user.email,
+            course: r.student.user.branch,
+            status: r.student.status,
+            resumeStatus: r.student.resume && r.student.resume.fileId ? r.student.resume.status : 'none',
+            matchScore: r.matchScore,
+            matchedSkills: r.matchedSkills,
+            missingSkills: r.missingSkills
+        }));
+
+        res.json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+});
 
 // GET /api/admin/applications — every application with company details
 router.get('/applications', async (req, res, next) => {

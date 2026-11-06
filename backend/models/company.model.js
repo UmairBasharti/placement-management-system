@@ -28,8 +28,11 @@ const companySchema = new mongoose.Schema({
     }],
     requirements: {
         type: String,
-        default: ''
+        default: '',
+        maxlength: [500, 'Requirements can be at most 500 characters']
     },
+    // Skills this job asks for (canonical names); used to match students. If empty, they are read from `requirements`.
+    requiredSkills: [{ type: String, trim: true, maxlength: 40 }],
     package: {
         type: String,   // stored as display string e.g. "8-12 LPA"
         default: ''

@@ -4,7 +4,8 @@ const Student = require('../models/student.model');
 const User = require('../models/user.model');
 const Event = require('../models/event.model');
 const Activity = require('../models/activity.model');
-const { resumeUpload, isPdfBuffer, cleanFileName, saveResume, deleteResume, sendResumeFile } = require('../utils/fileUpload');
+const { resumeUpload, isPdfBuffer, cleanFileName, saveResume, deleteResume, readResume, sendResumeFile } = require('../utils/fileUpload');
+const { extractPdfText, parseResume, ResumeReadError } = require('../utils/resumeParser');
 const { protect, authorize } = require('../middleware/auth.middleware');
 const validate = require('../middleware/validate');
 
@@ -117,6 +118,32 @@ router.get('/me/resume/file', async (req, res, next) => {
     try {
         const student = await findStudent(req, res);
         if (student) await sendResumeFile(res, student.resume);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// GET /api/students/me/resume/suggestions — read the stored resume and suggest skills, education and projects.
+// Nothing is saved: the student reviews the suggestions and applies the ones they want via PUT /me.
+router.get('/me/resume/suggestions', async (req, res, next) => {
+    try {
+        const student = await findStudent(req, res);
+        if (!student) return;
+        if (!student.resume || !student.resume.fileId) {
+            return res.status(400).json({ success: false, message: 'Upload a resume first' });
+        }
+
+        let text;
+        try {
+            text = await extractPdfText(await readResume(student.resume.fileId));
+        } catch (err) {
+            if (err instanceof ResumeReadError) {
+                return res.status(422).json({ success: false, message: `${err.message}. You can fill in your profile by hand.` });
+            }
+            throw err;
+        }
+
+        res.json({ success: true, data: { ...parseResume(text), textFound: text.trim().length > 0 } });
     } catch (error) {
         next(error);
     }
