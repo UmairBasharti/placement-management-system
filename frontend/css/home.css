@@ -316,6 +316,11 @@
     color: var(--primary-color);
 }
 
+/* the "+" after a count (data-suffix) stays on the same line as the number */
+.hero-stat-number[data-suffix]::after {
+    content: attr(data-suffix);
+}
+
 .hero-stat-label {
     display: block;
     font-size: 0.8rem;

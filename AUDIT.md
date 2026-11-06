@@ -259,7 +259,7 @@ Work top to bottom, one item at a time. Tick the box when the **Done when** chec
 ## Phase 6 — Remaining responsiveness
 
 **Desktop**
-- [ ] **R4 🟠 [V]** Student Companies page buttons unstyled — `.company-actions`, `.action-btn`, `.view-btn`, `.approve-btn`, `.reject-btn` exist only in [admin-dashboard.css:309-353](frontend/css/admin-dashboard.css#L309). "View Details" renders as a raw grey browser button. → move to a shared `dashboard.css` (Q2).
+- [x] **R4 🟠 [V]** Student Companies page buttons unstyled — `.company-actions`, `.action-btn`, `.view-btn`, `.approve-btn`, `.reject-btn` exist only in [admin-dashboard.css:309-353](frontend/css/admin-dashboard.css#L309). "View Details" renders as a raw grey browser button. → move to a shared `dashboard.css` (Q2). — **DONE 2026-11-06**: the card-button styles (`.company-actions`, `.action-btn`, `.view-btn`, `.approve-btn`, `.reject-btn`, pending state) now exist in the student stylesheet; verified View Details is purple/rounded and sits on the same row as Apply, applied-status buttons are coloured, no horizontal scroll on mobile. Also fixed in the same commit (found while taking screenshots): on the home page the "+" in "500+"/"50+" dropped onto its own line — now rendered via `data-suffix` + `::after`.
 - [ ] **R5 🟡 [C]** Every `.card` lifts 5px on hover, including large form/table/calendar cards → jitter while typing or clicking. Limit to small clickable cards.
 - [ ] **R6 ⚪ [V]** The login register form scrolls inside its fixed 550px card on desktop (content 577px). → `min-height` instead of `height`, or tighter spacing.
 
