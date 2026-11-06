@@ -103,6 +103,15 @@
     font-weight: 600;
 }
 
+.student-card .form-select {
+    min-width: 0;
+}
+
+.student-card .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
 .student-card .badges {
     display: flex;
     flex-wrap: wrap;
@@ -190,6 +199,13 @@
 }
 
 @media (max-width: 576px) {
+    /* Two tiles per row leave too little width beside the icon, so labels broke mid-word */
+    .kpi {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.6rem;
+    }
+
     .toolbar > .form-select,
     .toolbar > .btn {
         flex: 1 1 100%;
