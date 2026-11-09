@@ -22,7 +22,7 @@
 
 ## Overview
 
-A college placement cell collects resumes, matches students to companies and keeps track of who applied where. That work often lives in spreadsheets, e-mail and chat groups: resumes get lost in threads, nobody has one place to see a student's status, and a student cannot tell whether an application was seen. This project puts it all in one portal. It started as a semester project for **Dr. B.V. Hiray College of Management & Research Center, Malegaon (Nashik)**, and I later reviewed and rebuilt large parts of it for security, correctness and responsiveness.
+A college placement cell collects resumes, matches students to companies and keeps track of who applied where. That work often lives in spreadsheets, e-mail and chat groups: resumes get lost in threads, nobody has one place to see a student's status, and a student cannot tell whether an application was seen. This project puts it all in one portal. It started as a second-semester project in the first year of my MCA at **Dr. B.V. Hiray College of Management & Research Center, Malegaon (Nashik)**, and I later reviewed and rebuilt large parts of it for security, correctness and responsiveness.
 
 **Student.** Registers with a course (MCA or MBA), keeps a profile, uploads a PDF resume and can fill the profile from it. Sees open jobs ranked by how many of the required skills they already have, applies once the resume is approved, and follows every application, a placement-status timeline, notifications and events.
 
@@ -372,4 +372,4 @@ All endpoints are under `/api`; logged-in endpoints expect `Authorization: Beare
 
 ## Acknowledgements
 
-Developed for **Dr. B.V. Hiray College of Management & Research Center, Malegaon (Nashik)**.
+Started as a second-semester project in the first year of my MCA at **Dr. B.V. Hiray College of Management & Research Center, Malegaon (Nashik)**.
