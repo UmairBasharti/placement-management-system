@@ -161,11 +161,32 @@ Defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). The end-to-en
 
 ## Local development
 
-You need **Node.js 20.19 or newer**, **Git** and a **MongoDB database** (a free [MongoDB Atlas](https://www.mongodb.com/atlas) cluster is the easiest).
+You run **one program**: a Node.js server that serves the web pages and the API and keeps its data in a MongoDB database. There is no build step.
+
+### What you need
+
+| Tool | Version | Download | Check it works |
+|---|---|---|---|
+| **Git** | any recent (or skip it and download a ZIP, see step 1) | [git-scm.com/downloads](https://git-scm.com/downloads) | `git --version` |
+| **Node.js** | 20.19 or newer (the LTS version is fine) | [nodejs.org](https://nodejs.org) | `node --version` |
+| **MongoDB** | any recent | A free [MongoDB Atlas](https://www.mongodb.com/atlas) cluster is the easiest (steps below). MongoDB Community Server installed on your own computer works too | |
+| A browser | Chrome, Edge, Firefox or Safari | | |
+
+> **What is a terminal?** The window where you type commands. On Windows press the Windows key, type **PowerShell** and press Enter. On macOS open **Terminal**.
+
+### 1. Get the code
 
 ```bash
 git clone https://github.com/UmairBasharti/placement-management-system.git
-cd placement-management-system/backend
+cd placement-management-system
+```
+
+No Git? On the GitHub page click the green **Code** button, then **Download ZIP**, unzip it, and open your terminal inside the unzipped folder (it is called `placement-management-system-main`).
+
+### 2. Install and configure
+
+```bash
+cd backend
 npm install
 cp .env.example .env      # PowerShell: Copy-Item .env.example .env
 ```
@@ -189,12 +210,42 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 
 </details>
 
+**Prefer a database on your own computer?** Install MongoDB Community Server, skip the Atlas steps and use `MONGODB_URI=mongodb://localhost:27017/pms` (`127.0.0.1` works the same).
+
+### 3. Add demo data and start the server
+
 ```bash
 npm run seed      # demo accounts, three companies, two events
 npm run dev       # auto-restart on changes; `npm start` for plain node
 ```
 
-Open <http://localhost:5000>.
+`npm run seed` fills an empty database. You should see:
+
+```
+Connected to MongoDB
+Cleared existing data
+Created admin: admin@pms.com / admin123 (demo default)
+Created student: rahul@pms.com / student123 (MCA)
+Created student: priya@pms.com / student123 (MBA)
+Created 3 companies
+Created 2 events
+Seed complete. Start the app with: npm run dev
+```
+
+> **Careful: `seed` clears the database before it fills it.** If the database already has users it asks first (`y/N`); in a shell that cannot ask it stops with `The database already has N users. Run with --force to clear it and re-seed.` To wipe and re-seed on purpose, run `npm run seed -- --force`. The extra `--` matters: `npm run seed --force` is swallowed by npm and does nothing.
+
+`npm run dev` is ready when you see:
+
+```
+Connected to MongoDB
+Server running on http://localhost:5000
+```
+
+A warning about `punycode` or a `nodemon` banner above those lines is harmless. Leave this window open.
+
+### 4. Open it
+
+Go to <http://localhost:5000>.
 
 | Role | Email | Password |
 |---|---|---|
@@ -205,6 +256,8 @@ Open <http://localhost:5000>.
 These are for local demos only. Set `ADMIN_SEED_PASSWORD` before seeding anything other people can reach; the seed refuses the default password when `NODE_ENV=production`.
 
 **Try the whole flow.** Log in as Rahul, upload a text-based PDF on **Resume** and try **Fill my profile from this resume**. Log in as admin, approve the resume under **Resumes**. As Rahul, open **Companies**, check the match percentages and apply. As admin, accept or reject the application and watch Rahul's status change.
+
+**Next time** you only need to start the server: open a terminal in the `backend` folder and run `npm run dev`. Your data stays in the database. Stop the server with **Ctrl+C**.
 
 ### Configuration
 
@@ -242,6 +295,11 @@ The tests cover the placement-status rules, upload helpers, the error handler, t
 | `bad auth` or authentication failed | Wrong database user or password; URL-encode special characters |
 | Data lands in a database called `test` | The URI has no database name; use `...mongodb.net/pms?retryWrites=true&w=majority` |
 | "Missing required environment variable(s)" | Copy `backend/.env.example` to `backend/.env` and fill in `MONGODB_URI` and `JWT_SECRET` |
+| `node` or `npm` is not recognized | Install Node.js (see the table at the top of this section) and open a **new** terminal window |
+| "JWT_SECRET looks weak (use 32+ random characters before deploying)" | Only a warning while developing. Generate a real secret (command in step 2) before you deploy |
+| `Error: listen EADDRINUSE: address already in use :::5000` | Another program, or an older copy of this server in another terminal, is using port 5000. Close it, or add `PORT=5001` to `backend/.env` and open <http://localhost:5001> |
+| "The database already has N users. Run with --force to clear it and re-seed." | `seed` will not wipe a database that has data unless you say so: `npm run seed -- --force` (with the extra `--`) |
+| "Invalid email or password" for a demo account | The database is empty until you run `npm run seed`. Run it, then try again |
 | "Too many failed login attempts" | 10 failures per 15 minutes per address; wait, or restart the server while developing |
 | A student cannot apply | They need skills on the profile and an **approved** resume; the company must be active and open to their course |
 | "This PDF has no readable text" | The resume is a scan or photo; export a text PDF or fill the profile by hand |
