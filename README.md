@@ -24,7 +24,7 @@
 
 A college placement cell collects resumes, matches students to companies and keeps track of who applied where. That work often lives in spreadsheets, e-mail and chat groups: resumes get lost in threads, nobody has one place to see a student's status, and a student cannot tell whether an application was seen. This project puts it all in one portal. It started as a second-semester project in the first year of my MCA at **Dr. B.V. Hiray College of Management & Research Center, Malegaon (Nashik)**, and I later reviewed and rebuilt large parts of it for security, correctness and responsiveness.
 
-**Student.** Registers with a course (MCA or MBA), keeps a profile, uploads a PDF resume and can fill the profile from it. Sees open jobs ranked by how many of the required skills they already have, applies once the resume is approved, and follows every application, a placement-status timeline, notifications and events.
+**Student.** Registers with a course (MCA or MBA) and confirms their e-mail address from a link before logging in, can reset a forgotten password by e-mail, keeps a profile, uploads a PDF resume and can fill the profile from it. Sees open jobs ranked by how many of the required skills they already have, applies once the resume is approved, and follows every application, a placement-status timeline, notifications and events.
 
 **Placement cell (admin).** Reviews and approves resumes, manages companies (required skills, private notes, archive), sees the best-matching students for each job, accepts or rejects applications, sets placement statuses, publishes events and exports the student list as CSV.
 
@@ -45,6 +45,7 @@ A college placement cell collects resumes, matches students to companies and kee
 | Area | Implementation | Evidence |
 |---|---|---|
 | **Authentication and roles** | JWT (HS256 only), bcrypt hashing, student and admin roles checked on every protected route, public registration can only create students | [`auth.routes.js`](backend/routes/auth.routes.js), [`auth.middleware.js`](backend/middleware/auth.middleware.js) |
+| **E-mail verification and password reset** | A new account cannot log in until the e-mailed link is opened; a forgotten password is reset through a one-time e-mailed link. Mail goes out through Gmail SMTP (free) or any other SMTP server | [`auth.routes.js`](backend/routes/auth.routes.js), [`mailer.js`](backend/utils/mailer.js), [`tokens.js`](backend/utils/tokens.js) |
 | **Resume pipeline** | PDF upload checked by MIME type, size and real `%PDF-` header, stored in MongoDB GridFS, three review states (`pending`, `approved`, `rejected`), served only through authenticated routes | [`fileUpload.js`](backend/utils/fileUpload.js), [`student.routes.js`](backend/routes/student.routes.js), [`admin.routes.js`](backend/routes/admin.routes.js) |
 | **Resume to profile** | Reads PDF text locally with `unpdf`, finds skills with a dictionary of about 190 skills, cuts out Education and Projects by heading. The student reviews before anything is saved. No AI service, no API cost | [`resumeParser.js`](backend/utils/resumeParser.js), [`skills.js`](backend/utils/skills.js), [`data/skills.js`](backend/data/skills.js) |
 | **Job matching** | Match score is the share of a job's required skills the student already has; ranked recommendations for students, best-matching students per job for admins | [`matcher.js`](backend/utils/matcher.js), [`company.routes.js`](backend/routes/company.routes.js) |
@@ -52,7 +53,7 @@ A college placement cell collects resumes, matches students to companies and kee
 | **Admin tools** | Dashboard with charts, company CRUD with archive and notes, application decisions, student directory, CSV export (formula-injection safe), events with cascading updates to students' calendars | [`admin-dashboard.js`](frontend/js/admin-dashboard.js), [`event.routes.js`](backend/routes/event.routes.js) |
 | **Security hardening** | CSP without inline scripts, output escaping, rate limits, input type checks, central error handler, startup config validation, see [Security](#security) | [`server.js`](backend/server.js), [`utils.js`](frontend/js/utils.js) |
 | **Responsive UI** | One flex layout for both dashboards, slide-in menu below 993 px; checked with no horizontal overflow at 1440, 1024, 820, 390 and 320 px | [`dashboard.css`](frontend/css/dashboard.css), [`dashboard.js`](frontend/js/dashboard.js) |
-| **Quality gates** | 55 unit tests with `node --test`, ESLint 9, GitHub Actions on Node 22 and 24, production `npm audit` | [`tests/`](backend/tests), [`ci.yml`](.github/workflows/ci.yml) |
+| **Quality gates** | 65 unit tests with `node --test`, ESLint 9, GitHub Actions on Node 22 and 24, production `npm audit` | [`tests/`](backend/tests), [`ci.yml`](.github/workflows/ci.yml) |
 
 ## Product tour
 
@@ -116,9 +117,10 @@ The original code was reviewed line by line and attacked on purpose (for example
 | **NoSQL injection** | An id in a request body could be an object like `{"$ne": null}` and reach a query | Body ids must be 24-character hex strings; password and e-mail must be strings | [`objectId.js`](backend/utils/objectId.js), [`auth.routes.js`](backend/routes/auth.routes.js) |
 | **Weak credentials** | 6-character minimum, token algorithm not pinned, unknown e-mails answered faster than wrong passwords | 8 to 72 characters; HS256 only; an unknown e-mail still pays for one bcrypt comparison | [`auth.routes.js`](backend/routes/auth.routes.js), [`auth.middleware.js`](backend/middleware/auth.middleware.js) |
 | **Brute force** | Unlimited login attempts | 10 failed logins per 15 minutes per address, 20 registrations per hour, 600 API calls per 15 minutes | [`server.js`](backend/server.js) |
+| **Fake e-mails and account recovery** | Anyone could register with an address they do not own, and a forgotten password meant a locked-out account | Login needs a verified e-mail. Reset and verification links carry a random 256-bit token; only its SHA-256 hash is stored, it works once and expires (24 h, 60 min). Forgot-password answers the same for known and unknown e-mails, one link per account per minute, 30 e-mail requests per hour per address. A reset ends every login started before it | [`auth.routes.js`](backend/routes/auth.routes.js), [`tokens.js`](backend/utils/tokens.js), [`auth.middleware.js`](backend/middleware/auth.middleware.js) |
 | **Information leaks** | Database error messages reached the browser; admin-only notes were sent to students | Central error handler returns short messages and logs details server-side; students never receive notes and see only companies open to their course | [`error.middleware.js`](backend/middleware/error.middleware.js), [`company.routes.js`](backend/routes/company.routes.js) |
 | **Missing hardening** | No security headers, CORS open to everyone | helmet with CSP, `Permissions-Policy`, `no-store` on API responses, CORS closed unless `CLIENT_ORIGIN` is set, 100 kB body limit | [`server.js`](backend/server.js) |
-| **Secrets and config** | No env template, no check for missing secrets, public demo admin password | Startup validation (weak secrets refused in production), `.env.example`, seed requires `ADMIN_SEED_PASSWORD` in production | [`validateEnv.js`](backend/config/validateEnv.js) |
+| **Secrets and config** | No env template, no check for missing secrets, a public demo admin password written in the seed and the README | Startup validation (weak secrets refused in production), `.env.example`, no built-in admin: it is created by `npm run create-admin`, which masks the password as you type, and only its hash is stored | [`validateEnv.js`](backend/config/validateEnv.js), [`createAdmin.js`](backend/createAdmin.js) |
 | **Vulnerable dependencies** | Five known vulnerabilities, one critical | Updated to zero; `npm audit` for production dependencies runs in CI | [`ci.yml`](.github/workflows/ci.yml) |
 
 **Known trade-off:** the login token is kept in `localStorage`, which any script on the page could read. That is why the XSS controls above matter. A stricter set-up would use an `httpOnly` cookie with CSRF protection.
@@ -215,8 +217,9 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ### 3. Add demo data and start the server
 
 ```bash
-npm run seed      # demo accounts, three companies, two events
-npm run dev       # auto-restart on changes; `npm start` for plain node
+npm run seed          # two demo students, three companies, two events
+npm run create-admin  # your own admin account (asks for an e-mail and a password)
+npm run dev           # auto-restart on changes; `npm start` for plain node
 ```
 
 `npm run seed` fills an empty database. You should see:
@@ -224,13 +227,14 @@ npm run dev       # auto-restart on changes; `npm start` for plain node
 ```
 Connected to MongoDB
 Cleared existing data
-Created admin: admin@pms.com / admin123 (demo default)
 Created student: rahul@pms.com / student123 (MCA)
 Created student: priya@pms.com / student123 (MBA)
 Created 3 companies
 Created 2 events
-Seed complete. Start the app with: npm run dev
+Seed complete. Next: create your admin account with  npm run create-admin  and start the app with  npm run dev
 ```
+
+**The admin account.** There is no built-in admin and no admin password anywhere in the code, the seed data or this README. `npm run create-admin` asks for a name, an e-mail (use an inbox you can open, because "Forgot password?" sends the reset link there) and a password, which shows only as `****` while you type and is stored only as a bcrypt hash. It only adds or updates that one account and never touches other data. Run it again with the same e-mail to reset that admin's password, for example if it is ever lost. If other admin accounts exist it offers to delete them. For scripted set-ups you can set `ADMIN_EMAIL` and `ADMIN_PASSWORD` instead of typing them (keep them out of `.env`).
 
 > **Careful: `seed` clears the database before it fills it.** If the database already has users it asks first (`y/N`); in a shell that cannot ask it stops with `The database already has N users. Run with --force to clear it and re-seed.` To wipe and re-seed on purpose, run `npm run seed -- --force`. The extra `--` matters: `npm run seed --force` is swallowed by npm and does nothing.
 
@@ -249,11 +253,11 @@ Go to <http://localhost:5000>.
 
 | Role | Email | Password |
 |---|---|---|
-| Admin (use **Admin login** on the home page) | `admin@pms.com` | `admin123` |
+| Admin (use **Admin login** on the home page) | the e-mail you gave to `npm run create-admin` | the password you typed there |
 | Student, MCA | `rahul@pms.com` | `student123` |
 | Student, MBA | `priya@pms.com` | `student123` |
 
-These are for local demos only. Set `ADMIN_SEED_PASSWORD` before seeding anything other people can reach; the seed refuses the default password when `NODE_ENV=production`.
+The two demo students exist only in the seed data, for local demos; do not seed them on a server other people can reach. New students register themselves and verify their e-mail.
 
 **Try the whole flow.** Log in as Rahul, upload a text-based PDF on **Resume** and try **Fill my profile from this resume**. Log in as admin, approve the resume under **Resumes**. As Rahul, open **Companies**, check the match percentages and apply. As admin, accept or reject the application and watch Rahul's status change.
 
@@ -273,13 +277,17 @@ All settings are in `backend/.env` (template: [`backend/.env.example`](backend/.
 | `DNS_SERVERS` | no | | For example `8.8.8.8,1.1.1.1`. Fixes `querySrv ECONNREFUSED` on networks that block SRV lookups |
 | `TRUST_PROXY` | no | | `1` behind a reverse proxy, so rate limiting sees real client addresses |
 | `CLIENT_ORIGIN` | no | | Allowed browser origin(s), comma separated, only if the frontend is hosted elsewhere |
-| `ADMIN_SEED_PASSWORD` | in production | `admin123` | Password for the seeded admin |
+| `SMTP_USER`, `SMTP_PASS` | in production | | Mail account that sends the verification and reset e-mails (Gmail address and its app password). Without them the e-mails are printed in the server console instead |
+| `APP_URL` | in production | `http://localhost:PORT` | Public address of the site, used in the e-mailed links |
+| `SMTP_HOST`, `SMTP_PORT`, `MAIL_FROM` | no | `smtp.gmail.com`, `465` | Another mail provider, or a different sender name |
+
+**E-mail (verification and password reset).** New accounts must open a link sent to their e-mail before they can log in, and "Forgot password?" on the login page sends a reset link. To send real e-mail with a free Gmail account: turn on 2-Step Verification, create an app password (Google Account, Security, App passwords) and put the Gmail address in `SMTP_USER` and the 16-character password in `SMTP_PASS`. While developing you can leave both empty: the e-mail, with its link, is then printed in the server console, so the whole flow works on a laptop with no mail account. The seeded demo accounts are already verified, and so are accounts that existed before verification was added. For quick manual tests, a throwaway address such as `anything@yopmail.com` works (its inbox is public, so never use it for a real account).
 
 ### Testing
 
 ```bash
 npm install          # once, in the repository root (installs ESLint)
-npm test             # 55 unit tests
+npm test             # 65 unit tests
 npm run lint
 ```
 
@@ -291,7 +299,7 @@ The tests cover the placement-status rules, upload helpers, the error handler, t
 | Symptom | Fix |
 |---|---|
 | `querySrv ECONNREFUSED ...mongodb.net` | Add `DNS_SERVERS=8.8.8.8,1.1.1.1` to `backend/.env` |
-| Timeout when connecting to Atlas | Add your current IP under Atlas, Network Access. Some campus Wi-Fi blocks MongoDB; try a phone hotspot |
+| "Could not connect to any servers in your MongoDB Atlas cluster" or a timeout | Atlas is refusing your IP address. Add it under Atlas, Network Access, and wait until it shows Active. Your home IP can change, and a VPN or proxy in the browser can make "Add Current IP Address" add a different address than the one the server connects from. Some campus Wi-Fi blocks MongoDB; try a phone hotspot |
 | `bad auth` or authentication failed | Wrong database user or password; URL-encode special characters |
 | Data lands in a database called `test` | The URI has no database name; use `...mongodb.net/pms?retryWrites=true&w=majority` |
 | "Missing required environment variable(s)" | Copy `backend/.env.example` to `backend/.env` and fill in `MONGODB_URI` and `JWT_SECRET` |
@@ -300,6 +308,8 @@ The tests cover the placement-status rules, upload helpers, the error handler, t
 | `Error: listen EADDRINUSE: address already in use :::5000` | Another program, or an older copy of this server in another terminal, is using port 5000. Close it, or add `PORT=5001` to `backend/.env` and open <http://localhost:5001> |
 | "The database already has N users. Run with --force to clear it and re-seed." | `seed` will not wipe a database that has data unless you say so: `npm run seed -- --force` (with the extra `--`) |
 | "Invalid email or password" for a demo account | The database is empty until you run `npm run seed`. Run it, then try again |
+| "Invalid email or password" on the admin login | There is no default admin. Create one with `npm run create-admin` (running it again with the same e-mail resets the password) |
+| "Please verify your email before logging in" | Open the link in the e-mail sent at registration, or use "Resend verification email" on the login page. With no `SMTP_USER` / `SMTP_PASS` set, the link is printed in the server console |
 | "Too many failed login attempts" | 10 failures per 15 minutes per address; wait, or restart the server while developing |
 | A student cannot apply | They need skills on the profile and an **approved** resume; the company must be active and open to their course |
 | "This PDF has no readable text" | The resume is a scan or photo; export a text PDF or fill the profile by hand |
@@ -313,7 +323,7 @@ All endpoints are under `/api`; logged-in endpoints expect `Authorization: Beare
 | Area | Endpoints |
 |---|---|
 | Public | `GET /public/stats` · `GET /public/meta` · `GET /health` |
-| Auth | `POST /auth/register` · `POST /auth/login` · `GET /auth/me` |
+| Auth | `POST /auth/register` · `POST /auth/login` · `GET /auth/me` · `POST /auth/verify-email` · `POST /auth/resend-verification` · `POST /auth/forgot-password` · `POST /auth/reset-password` |
 | Student | `GET/PUT /students/me` · `POST /students/me/resume` · `GET /students/me/resume/file` · `GET /students/me/resume/suggestions` · notifications · calendar |
 | Companies | `GET /companies` · `GET /companies/recommended` · `GET /companies/:id` · admin: `POST` · `PUT /:id` · `DELETE /:id` · `POST /:id/notes` |
 | Applications | student: `GET /applications/my` · `POST /applications` · admin: `PUT /applications/:id/status` |
@@ -326,6 +336,7 @@ All endpoints are under `/api`; logged-in endpoints expect `Authorization: Beare
 |---|---|
 | App set-up, security headers, rate limits, startup and shutdown | [`backend/server.js`](backend/server.js) |
 | Login, registration, token handling | [`backend/routes/auth.routes.js`](backend/routes/auth.routes.js), [`backend/middleware/auth.middleware.js`](backend/middleware/auth.middleware.js) |
+| E-mail verification, password reset and the admin command | [`backend/utils/mailer.js`](backend/utils/mailer.js), [`backend/utils/tokens.js`](backend/utils/tokens.js), [`backend/createAdmin.js`](backend/createAdmin.js) |
 | Error handling that never leaks internals | [`backend/middleware/error.middleware.js`](backend/middleware/error.middleware.js) |
 | Business rules with tests | [`backend/utils/placementStatus.js`](backend/utils/placementStatus.js), [`backend/tests/`](backend/tests) |
 | Skill matching and resume reading | [`backend/utils/matcher.js`](backend/utils/matcher.js), [`backend/utils/resumeParser.js`](backend/utils/resumeParser.js) |
@@ -345,6 +356,8 @@ All endpoints are under `/api`; logged-in endpoints expect `Authorization: Beare
 | Rule-based resume reading instead of an AI API | Free, private, predictable and testable. The price is a smaller vocabulary and no support for scanned PDFs |
 | Removing a company archives it | Deleting would silently destroy students' application history |
 | An admin must approve a resume before a student can apply | The placement cell controls what companies receive |
+| Own verification and reset flow instead of a hosted login service such as Clerk | Keeps the working login and the one-command, no-extra-account set-up. The price is that this code is mine to maintain; the tokens and the rules around them are covered in [`tokens.js`](backend/utils/tokens.js) and the tests |
+| Gmail SMTP for sending mail | Free and needs no domain. It has a daily sending limit and sends from a Gmail address, so a busy production site would switch to a mail provider by setting `SMTP_HOST` |
 | Token in `localStorage` | Simple and works with one origin; mitigated by escaping and the CSP. A cookie with CSRF protection is the next step |
 | Courses are a fixed list in [`config/constants.js`](backend/config/constants.js) | One place to change; the forms read it from `/api/public/meta` |
 
@@ -354,7 +367,8 @@ All endpoints are under `/api`; logged-in endpoints expect `Authorization: Beare
 - Status changes write to several documents without a database transaction, so a crash between two writes could leave them briefly out of step.
 - The skill dictionary covers common IT and business skills; unknown skills still work as typed text but match only by exact spelling.
 - The pages load Bootstrap, Chart.js, Font Awesome and Google Fonts from CDNs (the first three pinned with integrity hashes), so they need an internet connection.
-- No e-mail notifications or password reset.
+- E-mail links trust whoever can read the inbox. An account registered with a public throwaway address such as Yopmail is therefore not protected, because anyone can open that inbox and use the reset link. If this were deployed, the next step would be to block known throwaway domains or to allow only the college's e-mail domain.
+- E-mail is used only to verify addresses and reset passwords; there are no notification e-mails yet. An account that has not verified its address stays in the database until someone resets its password or it is removed by hand.
 - Next: HTTP and browser end-to-end tests inside the repository, pagination, transactions, an `httpOnly` cookie session, a larger skill dictionary.
 
 ## Documentation

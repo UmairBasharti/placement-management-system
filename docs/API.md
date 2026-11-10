@@ -24,7 +24,7 @@ Authorization: Bearer <token>
 | 200, 201 | Success, created |
 | 400 | Validation error, invalid id, malformed JSON, or a business rule failed (the message says which) |
 | 401 | Missing, invalid or expired token, or wrong login |
-| 403 | Logged in but not allowed (wrong role, or the job is not open to the student's course) |
+| 403 | Logged in but not allowed (wrong role, or the job is not open to the student's course), or the e-mail is not verified yet |
 | 404 | Record or API route not found |
 | 409 | Duplicate value (for example an e-mail that is already registered) |
 | 413 | Request body too large |
@@ -54,8 +54,12 @@ Authorization: Bearer <token>
 
 | Access | Endpoint | Description |
 |---|---|---|
-| Public | `POST /auth/register` | Body `{ name, email, password, branch }`. Password 8 to 72 characters (a string); `branch` must be one of the courses from `/public/meta`. Always creates a student. Returns `201`; the user then logs in. |
-| Public | `POST /auth/login` | Body `{ email, password }`. Returns `{ token, user: { id, name, email, role } }`. The token lasts `JWT_EXPIRE` (24 h by default). |
+| Public | `POST /auth/register` | Body `{ name, email, password, branch }`. Password 8 to 72 characters (a string); `branch` must be one of the courses from `/public/meta`. Always creates a student that is **not yet verified** and e-mails it a verification link. Returns `201` with `{ message, emailSent }` (`emailSent` is `false` if the mail server failed; the account still exists and the user can ask for a new link). No token is returned. |
+| Public | `POST /auth/login` | Body `{ email, password }`. Returns `{ token, user: { id, name, email, role } }`. The token lasts `JWT_EXPIRE` (24 h by default). An account whose e-mail is not verified gets `403` with `code: "EMAIL_NOT_VERIFIED"` (only after the password was right). |
+| Public | `POST /auth/verify-email` | Body `{ token }`, the token from the e-mailed link (the page `verify-email.html` sends it). Marks the e-mail verified. `400` if the link is invalid, already used or older than 24 hours. |
+| Public | `POST /auth/resend-verification` | Body `{ email }`. Sends a new verification link if that account exists and is not verified. Always answers `200` with the same message, and sends at most one link per account per minute. |
+| Public | `POST /auth/forgot-password` | Body `{ email }`. E-mails a password reset link if the account exists. Always answers `200` with the same message, so it cannot be used to find out which e-mails are registered; at most one link per account per minute. |
+| Public | `POST /auth/reset-password` | Body `{ token, password }`, with the token from the e-mailed link and a new password of 8 to 72 characters. The link works once and for 60 minutes. A reset also marks the e-mail verified and ends every login started before it. `400` if the link is invalid, used or expired. |
 | Any user | `GET /auth/me` | The current user: `{ id, name, email, role, branch }`. |
 
 ## Student profile and resume

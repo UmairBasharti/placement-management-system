@@ -23,6 +23,7 @@ erDiagram
         string password "bcrypt hash, never returned"
         string role "student | admin"
         string branch "MCA | MBA, required for students"
+        boolean emailVerified "false until the e-mailed link is opened"
     }
     STUDENT {
         ObjectId _id PK
@@ -108,6 +109,10 @@ erDiagram
 | `password` | String | required, 8 to 72 characters, **bcrypt hash** (never stored in plain text), `select: false` so queries do not return it |
 | `role` | String | `student` (default) or `admin` |
 | `branch` | String | required for students: `MCA` or `MBA` (the list is in `config/constants.js`) |
+| `emailVerified` | Boolean | `false` for a new public registration until the e-mailed link is opened; **defaults to `true`**, so accounts created before verification existed and the seeded demo accounts keep working |
+| `emailVerificationToken`, `emailVerificationExpires` | String, Date | SHA-256 **hash** of the verification token and its expiry (24 hours); removed once used. `select: false` |
+| `passwordResetToken`, `passwordResetExpires` | String, Date | SHA-256 **hash** of the reset token and its expiry (60 minutes); removed once used. `select: false` |
+| `passwordChangedAt` | Date | set when the password is reset; login tokens issued before it are rejected |
 | `createdAt`, `updatedAt` | Date | automatic |
 
 ### `students`

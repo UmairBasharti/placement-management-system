@@ -66,10 +66,43 @@ sequenceDiagram
     Note over B: On a 401 the page clears the session<br/>and returns to the home page
 ```
 
-- **Roles:** `student` and `admin`. Public registration can only create students; the admin account comes from the seed script.
+- **Roles:** `student` and `admin`. Public registration can only create students; admin accounts are created from the command line with `npm run create-admin` (`createAdmin.js`), with no built-in admin credentials anywhere.
 - **Login pages:** the "Admin login" button (`login.html?admin=true`) admits only admins, the normal login only students. The server still checks the role on every route, so this is a convenience, not the security boundary.
 - **Token:** a JWT holding the user id, signed with `JWT_SECRET`, valid for `JWT_EXPIRE` (24 h by default), kept in `localStorage`. The trade-off is described in the README.
 - **Several tabs:** the session is shared by all tabs of a browser. When one tab logs in or out, the others reload (the `storage` event), so a stale tab can never keep acting as the previous user.
+
+### E-mail verification and password reset
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant B as Browser
+    participant S as Express API
+    participant DB as MongoDB
+    participant M as Mail server (SMTP)
+    U->>B: register
+    B->>S: POST /api/auth/register
+    S->>DB: create user (emailVerified = false, hash of token, expiry)
+    S->>M: e-mail with link verify-email.html?token=...
+    U->>B: opens the link
+    B->>S: POST /api/auth/verify-email { token }
+    S->>DB: find by hash of token and not expired, set emailVerified, remove token
+    Note over B,S: Login before this answers 403 EMAIL_NOT_VERIFIED
+    U->>B: "Forgot password?" and e-mail
+    B->>S: POST /api/auth/forgot-password
+    S->>DB: store hash of a new token (60 min)
+    S->>M: e-mail with link reset-password.html?token=...
+    U->>B: opens the link, types a new password
+    B->>S: POST /api/auth/reset-password { token, password }
+    S->>DB: use up the token, save the new password hash, set passwordChangedAt
+```
+
+- **Tokens:** 32 random bytes in the link; only their SHA-256 hash is stored, so a copy of the database cannot be turned into working links. Each works once and expires.
+- **No account enumeration:** forgot-password and resend-verification give the same answer whether or not the e-mail is registered, and send the mail in the background so the response time is the same.
+- **Flood control:** one link per account per minute, and 30 e-mail requests per hour per address (`server.js`).
+- **A reset signs everyone out:** `passwordChangedAt` is compared with the `iat` of every login token in `protect`.
+- **A reset also verifies the e-mail,** because the link only reaches the owner of the inbox. This is also what lets the real owner take over an address that someone else registered without verifying it.
+- **Mail transport:** `utils/mailer.js` sends through SMTP (Gmail by default). With no SMTP settings, outside production, it prints the message to the console instead.
 
 ## 4. Resume workflow
 
@@ -175,7 +208,9 @@ There is no build step and no framework. Every page is plain HTML with a small s
 | `js/utils.js` | Shared helpers: `esc()` (escapes text for HTML), date helpers, `withLoading()` and `guarded()` (spinner and error toast around a task), `showLoadError()`, `initSidebar()`, `openProtectedPdf()` |
 | `js/dashboard.js` | Shared by both dashboards: login check (`requireRole`), `apiFetch()`, toasts, sidebar navigation with URL hash, option lists from `/public/meta`, multi-tab session sync |
 | `js/home.js` | Landing page: navigation, real statistics from `/public/stats` |
-| `js/login.js` | Login and registration forms |
+| `js/auth-common.js` | Helpers shared by the login-style pages: `post()` (JSON request with the server's error message), alerts, button spinner, show/hide password |
+| `js/login.js` | Login and registration forms, the "Forgot password?" link and "Resend verification email" |
+| `js/forgot-password.js`, `js/reset-password.js`, `js/verify-email.js` | The three single-card pages the e-mails link to. The reset and verify pages read `?token=` from the link and remove it from the address bar |
 | `js/student-dashboard.js` | Dashboard, companies, profile, resume (upload and scan), status timeline, calendar, notifications |
 | `js/admin-dashboard.js` | Dashboard (charts), companies and applications, students, resumes, calendar |
 
