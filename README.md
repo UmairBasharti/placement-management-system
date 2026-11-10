@@ -32,7 +32,7 @@ A college placement cell collects resumes, matches students to companies and kee
 
 <table align="center">
   <tr>
-    <td align="center"><b>55</b><br><sub>unit tests</sub></td>
+    <td align="center"><b>65</b><br><sub>unit tests</sub></td>
     <td align="center"><b>0</b><br><sub>vulnerable production dependencies</sub></td>
     <td align="center"><b>~190</b><br><sub>skills the matcher recognises</sub></td>
     <td align="center"><b>5</b><br><sub>screen widths checked for overflow</sub></td>
