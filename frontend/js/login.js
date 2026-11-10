@@ -1,6 +1,6 @@
-// Log in and registration. Needs utils.js (esc).
+// Log in and registration. Needs utils.js and auth-common.js.
 
-const $ = (id) => document.getElementById(id);
+const { $, post, showAlert, setLoading, bindPasswordToggles } = window.authUi;
 const container = $('auth-container');
 const adminMode = new URLSearchParams(window.location.search).get('admin') === 'true';
 
@@ -11,34 +11,6 @@ try {
         window.location.replace(stored.role === 'admin' ? 'admin-dashboard.html' : 'student-dashboard.html');
     }
 } catch { /* unreadable storage: show the form */ }
-
-// Helpers
-async function post(endpoint, body) {
-    const res = await fetch(`/api${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    });
-    let data;
-    try { data = await res.json(); } catch { throw new Error('The server sent an unexpected response'); }
-    if (!res.ok) throw new Error(data.message || 'Request failed');
-    return data;
-}
-
-function showAlert(message, type = 'danger') {
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type}`;
-    alert.setAttribute('role', type === 'danger' ? 'alert' : 'status');
-    alert.innerHTML = `<i class="fas fa-${type === 'danger' ? 'circle-exclamation' : 'circle-check'}" aria-hidden="true"></i><span>${esc(message)}</span>`;
-    $('alert-area').appendChild(alert);
-    setTimeout(() => alert.classList.add('leaving'), 3700);
-    setTimeout(() => alert.remove(), 4000);
-}
-
-function setLoading(button, loading) {
-    button.disabled = loading;
-    button.classList.toggle('is-loading', loading);
-}
 
 // Switching between the two forms
 function showRegister(register) {
@@ -61,16 +33,7 @@ if (adminMode) {
 }
 
 // Show / hide password
-document.querySelectorAll('.toggle-password').forEach((button) => {
-    button.addEventListener('click', () => {
-        const input = button.parentElement.querySelector('input');
-        const show = input.type === 'password';
-        input.type = show ? 'text' : 'password';
-        button.setAttribute('aria-pressed', String(show));
-        button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-        button.firstElementChild.className = `fas fa-${show ? 'eye-slash' : 'eye'}`;
-    });
-});
+bindPasswordToggles();
 
 // Course list and password limits from the server (the HTML and these defaults are the fallback)
 let passwordMin = 8;
@@ -102,11 +65,13 @@ $('register-form')?.addEventListener('submit', async (e) => {
     const button = e.target.querySelector('button[type="submit"]');
     setLoading(button, true);
     try {
-        await post('/auth/register', { name, email, password, branch });
-        showAlert('Account created. You can log in now.', 'success');
+        const { message, emailSent } = await post('/auth/register', { name, email, password, branch });
+        // The account cannot log in until the e-mailed link is opened, so this message stays up longer
+        showAlert(message, emailSent ? 'success' : 'danger', 10000);
         e.target.reset();
         showRegister(false);
         $('login-email').value = email;
+        $('resend-verification').hidden = false;   // in case the e-mail does not arrive
         $('login-password').focus();
     } catch (err) {
         showAlert(err.message);
@@ -138,7 +103,25 @@ $('login-form').addEventListener('submit', async (e) => {
             window.location.href = user.role === 'admin' ? 'admin-dashboard.html' : 'student-dashboard.html';
         }, 500);
     } catch (err) {
-        showAlert(err.message);
+        showAlert(err.message, 'danger', err.code === 'EMAIL_NOT_VERIFIED' ? 8000 : 4000);
+        if (err.code === 'EMAIL_NOT_VERIFIED') $('resend-verification').hidden = false;
         setLoading(button, false);
+    }
+});
+
+// Ask for a new verification e-mail (shown after registering and after a login blocked as "not verified")
+$('resend-verification').addEventListener('click', async (e) => {
+    const email = $('login-email').value.trim();
+    if (!email) return showAlert('Enter your email above first.');
+
+    const button = e.currentTarget;
+    button.disabled = true;
+    try {
+        const { message } = await post('/auth/resend-verification', { email });
+        showAlert(message, 'success', 8000);
+    } catch (err) {
+        showAlert(err.message);
+    } finally {
+        button.disabled = false;
     }
 });

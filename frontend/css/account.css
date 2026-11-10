@@ -1,0 +1,81 @@
+/* Single-card account pages: forgot password, reset password, verify e-mail.
+   The background, fields, buttons, alerts and footer come from login.css. */
+
+.account-card {
+    width: 440px;
+    max-width: calc(100% - 40px);
+    margin: 20px;
+    padding: 40px;
+    border-radius: 30px;
+    text-align: center;
+    color: #333;
+    background: #fff;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.2);
+}
+
+.account-card .college-logo {
+    margin-bottom: 0.75rem;
+    border: 1px solid #eee;
+}
+
+.account-card h1 {
+    margin-bottom: 0.5rem;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.account-card p {
+    margin-bottom: 1rem;
+    color: #555;
+}
+
+/* The big icon of the verify / sent / error states */
+.state-icon {
+    margin-bottom: 1rem;
+    font-size: 3.5rem;
+}
+
+.state-icon.success { color: #2e7d32; }
+.state-icon.error { color: #c62828; }
+.state-icon.working { color: var(--primary-color); }
+
+.account-links {
+    margin: 1.25rem 0 0;
+    font-size: 0.9rem;
+}
+
+.account-links a {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.account-links a:hover {
+    text-decoration: underline;
+}
+
+/* A link that looks like the main button */
+a.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+
+a.btn:hover {
+    color: #fff;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 650px) {
+    .account-card {
+        padding: 28px 20px;
+        border-radius: 20px;
+    }
+
+    .account-card h1 {
+        font-size: 1.5rem;
+    }
+}

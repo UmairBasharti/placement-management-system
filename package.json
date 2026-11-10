@@ -25,7 +25,8 @@
     "test": "npm test --prefix backend",
     "start": "npm start --prefix backend",
     "dev": "npm run dev --prefix backend",
-    "seed": "npm run seed --prefix backend"
+    "seed": "npm run seed --prefix backend",
+    "create-admin": "npm run create-admin --prefix backend"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

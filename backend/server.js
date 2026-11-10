@@ -14,7 +14,9 @@ if (process.env.DNS_SERVERS) {
     require('dns').setServers(process.env.DNS_SERVERS.split(',').map(s => s.trim()));
 }
 
-require('./config/validateEnv')(['MONGODB_URI', 'JWT_SECRET']);
+// In production the e-mailed links need a real mail account and the public address of the site
+const production = process.env.NODE_ENV === 'production';
+require('./config/validateEnv')(['MONGODB_URI', 'JWT_SECRET', ...(production ? ['SMTP_USER', 'SMTP_PASS', 'APP_URL'] : [])]);
 
 const app = express();
 const FRONTEND_DIR = path.join(__dirname, '../frontend');
@@ -79,6 +81,10 @@ app.use('/api', limiter(15 * 60 * 1000, 600, 'Too many requests. Please slow dow
 // Login: only FAILED attempts count, so normal use is never throttled but brute force is
 app.use('/api/auth/login', limiter(15 * 60 * 1000, 10, 'Too many failed login attempts. Try again in 15 minutes.', { skipSuccessfulRequests: true }));
 app.use('/api/auth/register', limiter(60 * 60 * 1000, 20, 'Too many registrations from this address. Try again later.'));
+// These two send an e-mail, so they share one hourly allowance per address (an account also gets at most one link a minute)
+const mailLimiter = limiter(60 * 60 * 1000, 30, 'Too many email requests from this address. Try again later.');
+app.use('/api/auth/forgot-password', mailLimiter);
+app.use('/api/auth/resend-verification', mailLimiter);
 
 // Routes
 app.get('/api/health', (req, res) => {

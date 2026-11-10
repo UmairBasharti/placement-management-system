@@ -33,6 +33,14 @@ exports.protect = async (req, res, next) => {
             });
         }
 
+        // A password reset ends every session that started before it (iat is in whole seconds)
+        if (user.passwordChangedAt && decoded.iat < Math.floor(user.passwordChangedAt.getTime() / 1000)) {
+            return res.status(401).json({
+                success: false,
+                message: 'Not authorized — password was changed, please log in again'
+            });
+        }
+
         req.user = user;
         next();
 

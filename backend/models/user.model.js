@@ -32,7 +32,20 @@ const userSchema = new mongoose.Schema({
     branch: {
         type: String,
         required: function () { return this.role === 'student'; }
-    }
+    },
+    // Defaults to true so accounts that existed before verification was added (and the seeded ones)
+    // keep working; public registration explicitly creates students as false
+    emailVerified: {
+        type: Boolean,
+        default: true
+    },
+    // Only the SHA-256 hash of each e-mailed token is stored (see utils/tokens.js)
+    emailVerificationToken: { type: String, select: false },
+    emailVerificationExpires: { type: Date, select: false },
+    passwordResetToken: { type: String, select: false },
+    passwordResetExpires: { type: Date, select: false },
+    // Login tokens issued before this moment are rejected (set when the password is reset)
+    passwordChangedAt: { type: Date }
 }, { timestamps: true });
 
 // Hash password before saving — only when it's been modified

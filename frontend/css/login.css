@@ -152,6 +152,35 @@ body {
     color: var(--primary-color);
 }
 
+/* Small text links under the fields: "Forgot password?" and "Resend verification email" */
+.forgot-link {
+    display: block;
+    margin: -8px 0 16px;
+    font-size: 0.9rem;
+    text-align: right;
+    color: #555;
+}
+
+.link-button {
+    margin-top: 16px;
+    padding: 0;
+    border: none;
+    font: 600 0.9rem 'Poppins', sans-serif;
+    color: var(--primary-color);
+    background: none;
+    cursor: pointer;
+}
+
+.forgot-link:hover,
+.link-button:hover {
+    text-decoration: underline;
+}
+
+.link-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 .btn {
     position: relative;
     width: 100%;

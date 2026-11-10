@@ -1,4 +1,5 @@
 // Fills the database with demo data:  npm run seed   (add --force to skip the confirmation question)
+// It creates no admin: run  npm run create-admin  afterwards to make one with your own e-mail and password.
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const readline = require('readline');
@@ -18,14 +19,7 @@ if (process.env.DNS_SERVERS) {
 
 require('./config/validateEnv')(['MONGODB_URI']);
 
-const production = process.env.NODE_ENV === 'production';
-if (production && !process.env.ADMIN_SEED_PASSWORD) {
-    console.error('Set ADMIN_SEED_PASSWORD before seeding in production (the demo default is public).');
-    process.exit(1);
-}
-
 const force = process.argv.includes('--force');
-const ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD || 'admin123';
 
 // Local date-time string like the admin form produces, `days` from today
 function eventDate(days, hour, minute) {
@@ -77,9 +71,6 @@ async function seed() {
     await clearAll();
     console.log('Cleared existing data');
 
-    await User.create({ name: 'Admin', email: 'admin@pms.com', password: ADMIN_PASSWORD, role: 'admin' });
-    console.log(`Created admin: admin@pms.com / ${process.env.ADMIN_SEED_PASSWORD ? '(ADMIN_SEED_PASSWORD)' : 'admin123 (demo default)'}`);
-
     await createStudent({
         name: 'Rahul Sharma', email: 'rahul@pms.com', branch: 'MCA',
         skills: 'JavaScript, Node.js, MongoDB',
@@ -124,7 +115,7 @@ async function seed() {
     ]);
     console.log('Created 2 events');
 
-    console.log('\nSeed complete. Start the app with: npm run dev');
+    console.log('\nSeed complete. Next: create your admin account with  npm run create-admin  and start the app with  npm run dev');
 }
 
 seed()

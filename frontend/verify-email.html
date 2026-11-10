@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify email — Placement Management System</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+    <meta name="robots" content="noindex">
+    <meta name="theme-color" content="#bd0745">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha384-nRgPTkuX86pH8yjPJUAFuASXQSSl2/bBUiNV47vSYpKFxHJhbcrGnmlYpYJMeD7a" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/login.css">
+    <link rel="stylesheet" href="css/account.css">
+</head>
+<body>
+    <a href="login.html" class="back-home" aria-label="Back to log in"><i class="fas fa-arrow-left" aria-hidden="true"></i><span class="back-home-text">Back to log in</span></a>
+
+    <main class="account-card" aria-live="polite">
+        <section id="working-panel">
+            <i class="fas fa-spinner fa-spin state-icon working" aria-hidden="true"></i>
+            <h1>Verifying your email…</h1>
+            <p>This only takes a moment.</p>
+        </section>
+
+        <section id="success-panel" hidden>
+            <i class="fas fa-circle-check state-icon success" aria-hidden="true"></i>
+            <h1>Email verified</h1>
+            <p>Your account is active. You can log in now.</p>
+            <a href="login.html" class="btn">Log in</a>
+        </section>
+
+        <section id="failed-panel" hidden>
+            <i class="fas fa-circle-xmark state-icon error" aria-hidden="true"></i>
+            <h1>Link not valid</h1>
+            <p>This verification link is invalid, has already been used, or has expired. If you already verified your email, just log in. Otherwise enter your email and we will send a new link.</p>
+            <form id="resend-form" novalidate>
+                <div class="input-box">
+                    <label class="visually-hidden" for="resend-email">Email</label>
+                    <input type="email" id="resend-email" name="email" placeholder="Email" autocomplete="email" required>
+                    <i class="fas fa-envelope" aria-hidden="true"></i>
+                </div>
+                <button type="submit" class="btn">Send a new link</button>
+            </form>
+            <p class="account-links"><a href="login.html">Back to log in</a></p>
+        </section>
+    </main>
+
+    <div id="alert-area" class="alert-area" role="status" aria-live="polite"></div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <span>Placement Management System</span>
+            <span>Dr. B.V. Hiray College of Management &amp; Research Center, Malegaon</span>
+        </div>
+    </footer>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth-common.js"></script>
+    <script src="js/verify-email.js"></script>
+</body>
+</html>
