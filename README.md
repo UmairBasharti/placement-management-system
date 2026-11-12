@@ -57,11 +57,77 @@ A college placement cell collects resumes, matches students to companies and kee
 
 ## Product tour
 
-<p align="center"><img src="docs/assets/showcase-student.png" alt="Student experience: ranked jobs, resume scan, calendar" width="100%"></p>
-<p align="center"><img src="docs/assets/showcase-admin.png" alt="Placement cell: best-matching students, resume review, student directory" width="100%"></p>
-<p align="center"><img src="docs/assets/responsive.png" alt="One layout on desktop, tablet and phone" width="100%"></p>
+Every screen below is the real application. They were captured from the running app against a throwaway local database, so all names, e-mail addresses and companies are made up.
 
-> The screenshots use fictional data (eight students, six companies), a larger set than `npm run seed` creates.
+### Getting in
+
+<table>
+<tr>
+<td width="33%"><img src="docs/assets/screenshots/public/01-home.webp" alt="Home page with the headline Campus placements, in one place, and live counts"><br><sub><b>Home.</b> What the portal is for, with live counts of registered students, companies hiring and students placed.</sub></td>
+<td width="33%"><img src="docs/assets/screenshots/public/02-home-features.webp" alt="Features section: profile and resume, job recommendations, company listings, application tracking, resume review, events"><br><sub><b>What it does.</b> Profile and resume, job recommendations, company listings, application tracking, resume review and events.</sub></td>
+<td width="33%"><img src="docs/assets/screenshots/public/03-login.webp" alt="Student login page"><br><sub><b>Student login.</b> E-mail and password; a forgotten password is reset by e-mail.</sub></td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td width="50%"><img src="docs/assets/screenshots/public/04-register.webp" alt="Registration form with name, e-mail, password and course"><br><sub><b>Register.</b> Students choose MCA or MBA and confirm their e-mail address from a link before they can log in.</sub></td>
+<td width="50%"><img src="docs/assets/screenshots/public/05-admin-login.webp" alt="Separate admin login page"><br><sub><b>Admin login.</b> The placement cell logs in from its own page. There is no default admin account: admins are created with a command.</sub></td>
+</tr>
+</table>
+
+### For students
+
+<table>
+<tr>
+<td width="33%"><img src="docs/assets/screenshots/student/s01-dashboard.webp" alt="Student dashboard with placement status, applications, profile completion and recommended jobs"><br><sub><b>Dashboard.</b> Placement status, application counts, profile completion and the jobs that suit the student best.</sub></td>
+<td width="33%"><img src="docs/assets/screenshots/student/s02-companies.webp" alt="Company list ranked by skill match, with match percentages"><br><sub><b>Jobs ranked by skill match.</b> Each company shows how many of its required skills the student already has.</sub></td>
+<td width="33%"><img src="docs/assets/screenshots/student/s03-job-details.webp" alt="Job details showing which required skills the student has and which are missing"><br><sub><b>Why it matches.</b> Green skills the student has, grey ones still to learn. Applying needs skills on the profile and an approved resume.</sub></td>
+</tr>
+<tr>
+<td width="33%"><img src="docs/assets/screenshots/student/s04-profile.webp" alt="Profile page with skills, education and projects"><br><sub><b>Profile.</b> Skills, education and projects, edited as plain text.</sub></td>
+<td width="33%"><img src="docs/assets/screenshots/student/s05-resume.webp" alt="Resume page showing an approved resume"><br><sub><b>Resume.</b> One PDF per student, stored in MongoDB. The placement cell approves it before the student can apply.</sub></td>
+<td width="33%"><img src="docs/assets/screenshots/student/s09-resume-scan.webp" alt="Dialog suggesting skills, education and projects found in an uploaded resume"><br><sub><b>Profile from the resume.</b> The PDF is read on the server, with no outside service, and suggests content. Nothing is saved until the student ticks what to keep.</sub></td>
+</tr>
+<tr>
+<td width="33%"><img src="docs/assets/screenshots/student/s06-status.webp" alt="Placement status history timeline"><br><sub><b>Status history.</b> Every change to the placement status, newest first.</sub></td>
+<td width="33%"><img src="docs/assets/screenshots/student/s07-calendar.webp" alt="Calendar of placement events with add-to-calendar buttons"><br><sub><b>Events.</b> Drives and workshops posted by the placement cell, which students add to their own calendar.</sub></td>
+<td width="33%"><img src="docs/assets/screenshots/student/s08-notifications.webp" alt="Notifications list"><br><sub><b>Notifications.</b> Resume decisions, application results and status changes.</sub></td>
+</tr>
+</table>
+
+### For the placement cell
+
+<table>
+<tr>
+<td width="33%"><img src="docs/assets/screenshots/admin/a01-dashboard.webp" alt="Admin dashboard with totals, a placement status chart and recent activity"><br><sub><b>Dashboard.</b> Totals, placement status, students per course and the latest activity.</sub></td>
+<td width="33%"><img src="docs/assets/screenshots/admin/a02-companies.webp" alt="Company list with details, edit and remove actions"><br><sub><b>Companies.</b> Add, edit or remove a company and the skills each job requires.</sub></td>
+<td width="33%"><img src="docs/assets/screenshots/admin/a03-company-details.webp" alt="Company details with a ranked list of best-matching students and private notes"><br><sub><b>Best-matching students.</b> Required skills become a ranked list of students, with resume status beside each name, plus private notes students never see.</sub></td>
+</tr>
+<tr>
+<td width="33%"><img src="docs/assets/screenshots/admin/a05-students.webp" alt="Student directory with course and status filters"><br><sub><b>Student directory.</b> Search, filter by course or status, set a placement status by hand, export to CSV.</sub></td>
+<td width="33%"><img src="docs/assets/screenshots/admin/a06-student-profile.webp" alt="Student profile dialog with skills, education, projects, resume and placement history"><br><sub><b>Student profile.</b> Skills, education, projects, the resume and the full placement history in one place.</sub></td>
+<td width="33%"><img src="docs/assets/screenshots/admin/a07-resumes.webp" alt="Resume review table with approve and reject buttons"><br><sub><b>Resume review.</b> Open the PDF, then approve or reject. The student is notified and can apply only after approval.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/assets/screenshots/admin/a04-add-company.webp" alt="Form for adding a company"><br><sub><b>Add a company.</b> Job type, eligible courses, requirements, required skills and package.</sub></td>
+<td width="50%"><img src="docs/assets/screenshots/admin/a08-calendar.webp" alt="Event management with a list of events and an add-event form"><br><sub><b>Events.</b> Create, edit and cancel drives and workshops. Changes reach every student.</sub></td>
+</tr>
+</table>
+
+### On a phone
+
+<table>
+<tr>
+<td width="20%"><img src="docs/assets/screenshots/student/m03-dashboard.webp" alt="Student dashboard on a phone"><br><sub><b>Student.</b> Dashboard.</sub></td>
+<td width="20%"><img src="docs/assets/screenshots/student/m04-companies.webp" alt="Company list on a phone"><br><sub><b>Student.</b> Jobs.</sub></td>
+<td width="20%"><img src="docs/assets/screenshots/student/m05-menu.webp" alt="Slide-in navigation menu on a phone"><br><sub><b>Menu.</b> Slides in below 993 px.</sub></td>
+<td width="20%"><img src="docs/assets/screenshots/admin/m06-admin-dashboard.webp" alt="Admin dashboard on a phone"><br><sub><b>Placement cell.</b> Dashboard.</sub></td>
+<td width="20%"><img src="docs/assets/screenshots/admin/m07-admin-students.webp" alt="Student directory on a phone"><br><sub><b>Placement cell.</b> Students.</sub></td>
+</tr>
+</table>
+
+One layout serves every width: checked for horizontal overflow at 1440, 1024, 820, 390 and 320 px.
 
 ## Architecture
 
